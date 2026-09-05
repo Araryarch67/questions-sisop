@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, JetBrains_Mono, Instrument_Sans } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Sans } from "next/font/google";
+import "katex/dist/katex.min.css";
 import "./globals.css";
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,23 +14,23 @@ const geistMono = Geist_Mono({
 });
 
 const instrument = Instrument_Sans({
-  variable: "--font-display",
+  variable: "--font-instrument-sans",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "TRYOUT ETS // RYOKU DOSSIER",
+  title: "Ryoku — A space for curious minds",
   description:
-    "Tryout ETS bergaya Ryoku untuk latihan Sistem Operasi dan arsitektur komputer (William Stallings).",
+    "Pahami setiap lapisan. Ruang belajar Sistem Operasi dan Jaringan Komputer dengan 357 soal, latihan per bab, simulasi, dan pembahasan EAS.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="id"
-      className={`${jetbrainsMono.variable} ${geistSans.variable} ${geistMono.variable} ${instrument.variable} dark h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${instrument.variable} dark h-full antialiased`}
     >
-      <body className="min-h-full bg-[#080808] text-[#E8E0D1] flex flex-col selection:bg-[#E8E0D1] selection:text-black">
+      <body className="min-h-full flex flex-col">
         {children}
       </body>
     </html>

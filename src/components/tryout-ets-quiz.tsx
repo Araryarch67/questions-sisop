@@ -38,18 +38,62 @@ import {
   tryoutChapters,
   tryoutEtsQuestions,
 } from "@/lib/tryout-ets"
+import { RichExplanationCard } from "@/components/rich-explanation-card"
 
 export type { TryoutChapter, TryoutEtsQuestion }
 
+/** Display copy + filters for a question bank. Defaults preserve the ETS bank. */
+export type QuizBankMeta = {
+  bankTag: string
+  subjectLine: string
+  moduleEyebrow: string
+  hubDescription: string
+  searchPlaceholder: string
+  simulationBadge: string
+  simulationTitle: string
+  simulationDescription: string
+  /** Shown as "~90 Menit" chip; omit when the bank has no recommended time. */
+  recommendedTime?: string
+  syllabusFooter: string
+  partFilters: { label: string; value: string }[]
+}
+
+export const etsBankMeta: QuizBankMeta = {
+  bankTag: "ETS",
+  subjectLine: "SISTEM OPERASI & ARSITEKTUR",
+  moduleEyebrow: "MODUL PELATIHAN ETS // SILABUS WILLIAM STALLINGS",
+  hubDescription:
+    "Soal tryout telah dipetakan secara terstruktur ke dalam 7 Bab silabus mata kuliah Sistem Operasi. Pilih bab yang ingin kamu kuasai, atau mulai simulasi penuh seluruh bab.",
+  searchPlaceholder: "Cari topik (DMA, Semaphore, PCB)...",
+  simulationBadge: "FULL ETS SIMULATION MODE",
+  simulationTitle: "Simulasi Komprehensif ETS (Semua 117 Soal)",
+  simulationDescription:
+    "Uji kemampuanmu secara menyeluruh seperti menghadapi ujian ETS sesungguhnya. Progres jawaban tersimpan otomatis di perangkatmu dan dapat dilanjutkan kapan saja.",
+  recommendedTime: "~90 Menit",
+  syllabusFooter: "TRYOUT-ETS // SILABUS WILLIAM STALLINGS",
+  partFilters: [
+    { label: "SEMUA BAB (7)", value: "ALL" },
+    { label: "PART 1: BACKGROUND (CH 1-2)", value: "PART 1" },
+    { label: "PART 2: PROCESSES & THREADS (CH 3-6)", value: "PART 2" },
+    { label: "PART 4: SCHEDULING (CH 9)", value: "PART 4" },
+  ],
+}
+
+export type QuizQuestion = TryoutEtsQuestion & { explanation?: string }
+
 export type TryoutEtsQuizProps = {
-  questions?: TryoutEtsQuestion[]
+  questions?: QuizQuestion[]
+  chapters?: TryoutChapter[]
+  bank?: QuizBankMeta
+  /** Prefix for localStorage keys; keeps answer banks isolated per subject. */
+  storagePrefix?: string
   title?: string
   initialChapterId?: string | null
 }
 
 const optionLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-// Map chapter to tactical icon
+// Map chapter to icon
 function getChapterIcon(id: string) {
   switch (id) {
     case "ch01":
@@ -71,7 +115,7 @@ function getChapterIcon(id: string) {
   }
 }
 
-// Chapter tactical difficulty indicator
+// Chapter difficulty indicator
 function getChapterDifficulty(id: string): { label: string; color: string } {
   switch (id) {
     case "ch01":
@@ -120,9 +164,14 @@ function getGradeBadge(scorePercent: number) {
 
 export function TryoutEtsQuiz({
   questions = tryoutEtsQuestions,
+  chapters = tryoutChapters,
+  bank = etsBankMeta,
+  storagePrefix = "ryoku_tryout",
   title = "TRYOUT-ETS",
   initialChapterId = null,
 }: TryoutEtsQuizProps) {
+  const answersKey = `${storagePrefix}_answers`
+  const flagsKey = `${storagePrefix}_flags`
   // Navigation & State
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(initialChapterId)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -131,7 +180,7 @@ export function TryoutEtsQuiz({
   const [answers, setAnswers] = useState<Record<number, number[]>>(() => {
     if (typeof window === "undefined") return {}
     try {
-      const saved = localStorage.getItem("ryoku_tryout_answers")
+      const saved = localStorage.getItem(answersKey)
       return saved ? JSON.parse(saved) : {}
     } catch {
       return {}
@@ -141,7 +190,7 @@ export function TryoutEtsQuiz({
   const [flagged, setFlagged] = useState<number[]>(() => {
     if (typeof window === "undefined") return []
     try {
-      const saved = localStorage.getItem("ryoku_tryout_flags")
+      const saved = localStorage.getItem(flagsKey)
       return saved ? JSON.parse(saved) : []
     } catch {
       return []
@@ -160,15 +209,15 @@ export function TryoutEtsQuiz({
   // Sync to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem("ryoku_tryout_answers", JSON.stringify(answers))
+      localStorage.setItem(answersKey, JSON.stringify(answers))
     } catch {}
-  }, [answers])
+  }, [answers, answersKey])
 
   useEffect(() => {
     try {
-      localStorage.setItem("ryoku_tryout_flags", JSON.stringify(flagged))
+      localStorage.setItem(flagsKey, JSON.stringify(flagged))
     } catch {}
-  }, [flagged])
+  }, [flagged, flagsKey])
 
   // Active question set based on selected chapter
   const activeQuestions = useMemo(() => {
@@ -180,8 +229,8 @@ export function TryoutEtsQuiz({
 
   const currentChapter = useMemo(() => {
     if (!selectedChapterId || selectedChapterId === "all") return null
-    return tryoutChapters.find((c) => c.id === selectedChapterId) ?? null
-  }, [selectedChapterId])
+    return chapters.find((c) => c.id === selectedChapterId) ?? null
+  }, [selectedChapterId, chapters])
 
   const isCurrentSubmitted = selectedChapterId
     ? !!submittedChapters[selectedChapterId]
@@ -222,7 +271,7 @@ export function TryoutEtsQuiz({
     ? Math.round((correctCount / totalQuestions) * 100)
     : 0
 
-  // Overall statistics for all 117 questions
+  // Overall statistics for all questions in this bank
   const totalAllQuestions = questions.length
   const totalAllAnswered = useMemo(
     () => questions.filter((q) => (answers[q.id]?.length ?? 0) > 0).length,
@@ -266,7 +315,7 @@ export function TryoutEtsQuiz({
   )
 
   const selectOption = useCallback(
-    (question: TryoutEtsQuestion, optionIndex: number) => {
+    (question: QuizQuestion, optionIndex: number) => {
       if (isReviewMode) return
       setAnswers((previousAnswers) => {
         const currentAnswers = previousAnswers[question.id] ?? []
@@ -379,7 +428,7 @@ export function TryoutEtsQuiz({
   const resetAllProgress = () => {
     if (
       window.confirm(
-        "Peringatan: Reset akan menghapus seluruh rekaman jawaban dari semua 7 chapter. Lanjutkan?",
+        `Peringatan: Reset akan menghapus seluruh rekaman jawaban dari semua ${chapters.length} chapter bank ${bank.bankTag}. Lanjutkan?`,
       )
     ) {
       setAnswers({})
@@ -391,8 +440,8 @@ export function TryoutEtsQuiz({
       setShowSubmitNotice(false)
       setIsReviewMode(false)
       try {
-        localStorage.removeItem("ryoku_tryout_answers")
-        localStorage.removeItem("ryoku_tryout_flags")
+        localStorage.removeItem(answersKey)
+        localStorage.removeItem(flagsKey)
       } catch {}
     }
   }
@@ -402,9 +451,9 @@ export function TryoutEtsQuiz({
       handleBackToHub()
       return
     }
-    const chapterIdx = tryoutChapters.findIndex((c) => c.id === selectedChapterId)
-    if (chapterIdx >= 0 && chapterIdx < tryoutChapters.length - 1) {
-      handleSelectChapter(tryoutChapters[chapterIdx + 1].id)
+    const chapterIdx = chapters.findIndex((c) => c.id === selectedChapterId)
+    if (chapterIdx >= 0 && chapterIdx < chapters.length - 1) {
+      handleSelectChapter(chapters[chapterIdx + 1].id)
     } else {
       handleBackToHub()
     }
@@ -412,7 +461,7 @@ export function TryoutEtsQuiz({
 
   // Filter chapters in the selection hub with search
   const filteredChapters = useMemo(() => {
-    return tryoutChapters.filter((c) => {
+    return chapters.filter((c) => {
       const matchesPart = partFilter === "ALL" || c.part.includes(partFilter)
       const q = searchQuery.toLowerCase().trim()
       const matchesSearch =
@@ -422,7 +471,7 @@ export function TryoutEtsQuiz({
         c.topics.some((t) => t.toLowerCase().includes(q))
       return matchesPart && matchesSearch
     })
-  }, [partFilter, searchQuery])
+  }, [partFilter, searchQuery, chapters])
 
   // Filtered list in question map
   const displaySidebarQuestions = useMemo(() => {
@@ -454,20 +503,11 @@ export function TryoutEtsQuiz({
   if (!selectedChapterId) {
     return (
       <section className="relative min-h-svh overflow-hidden bg-[#080808] text-[#e8e0d1]">
-        {/* Ambient tactical background */}
-        <div aria-hidden="true" className="ryoku-grid pointer-events-none absolute inset-0 opacity-40" />
-        <div aria-hidden="true" className="ryoku-scanline pointer-events-none absolute inset-0 opacity-70" />
-
-        <span aria-hidden="true" className="pointer-events-none absolute left-3 top-3 font-mono text-xs text-[#f2a89e]/30">┌ +</span>
-        <span aria-hidden="true" className="pointer-events-none absolute right-3 top-3 font-mono text-xs text-[#f2a89e]/30">+ ┐</span>
-        <span aria-hidden="true" className="pointer-events-none absolute bottom-3 left-3 font-mono text-xs text-[#f2a89e]/30">└ +</span>
-        <span aria-hidden="true" className="pointer-events-none absolute bottom-3 right-3 font-mono text-xs text-[#f2a89e]/30">+ ┘</span>
-
         {/* Top Header HUD */}
         <header className="relative border-b border-white/10 bg-[#0c0c0c]/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
-          <div className="mx-auto flex max-w-[96rem] flex-wrap items-center justify-between gap-4">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center border border-[#f2a89e]/60 bg-[#f2a89e]/10 text-[#f2a89e] tactical-glow">
+              <div className="flex size-9 items-center justify-center border border-[#f2a89e]/60 bg-[#f2a89e]/10 text-[#f2a89e] ">
                 <Zap className="size-4" />
               </div>
               <div>
@@ -479,7 +519,7 @@ export function TryoutEtsQuiz({
                   <span className="font-mono text-[0.55rem] text-emerald-400/90 tracking-wider">ONLINE</span>
                 </div>
                 <h1 className="font-[family-name:var(--font-display)] text-lg tracking-[0.06em] text-[#f0e9df] sm:text-xl">
-                  {title} • SISTEM OPERASI & ARSITEKTUR
+                  {title} • {bank.subjectLine}
                 </h1>
               </div>
             </div>
@@ -520,20 +560,19 @@ export function TryoutEtsQuiz({
         </header>
 
         {/* Main Content Area */}
-        <main className="relative mx-auto max-w-[96rem] px-4 py-7 sm:px-6 lg:px-8">
+        <main className="relative mx-auto max-w-5xl px-4 py-7 sm:px-6 lg:px-8">
           {/* Subtitle & Search Bar */}
           <div className="mb-8 border-b border-white/10 pb-6">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="font-mono text-[0.58rem] font-bold tracking-[0.25em] text-[#9d9992]">
-                  MODUL PELATIHAN ETS // SILABUS WILLIAM STALLINGS
+                  {bank.moduleEyebrow}
                 </p>
                 <h2 className="mt-1 font-[family-name:var(--font-display)] text-2xl tracking-tight text-[#f0e9df] sm:text-3xl">
                   Pilih Chapter Materi Ujian
                 </h2>
                 <p className="mt-1.5 max-w-3xl text-xs leading-5 text-[#aaa69f]">
-                  Soal tryout telah dipetakan secara terstruktur ke dalam 7 Bab silabus mata kuliah Sistem Operasi.
-                  Pilih bab yang ingin kamu kuasai, atau mulai simulasi penuh seluruh bab.
+                  {bank.hubDescription}
                 </p>
               </div>
 
@@ -544,7 +583,7 @@ export function TryoutEtsQuiz({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Cari topik (DMA, Semaphore, PCB)..."
+                  placeholder={bank.searchPlaceholder}
                   className="w-full border border-white/15 bg-white/[0.03] py-2 pl-9 pr-8 font-mono text-xs text-[#f0e9df] placeholder:text-[#6e6a64] focus:border-[#f2a89e] focus:outline-none"
                 />
                 {searchQuery && (
@@ -564,12 +603,7 @@ export function TryoutEtsQuiz({
               <span className="mr-2 flex items-center gap-1 font-mono text-[0.58rem] font-semibold text-[#7d7973]">
                 <Filter className="size-3" /> FILTER:
               </span>
-              {[
-                { label: "SEMUA BAB (7)", value: "ALL" },
-                { label: "PART 1: BACKGROUND (CH 1-2)", value: "PART 1" },
-                { label: "PART 2: PROCESSES & THREADS (CH 3-6)", value: "PART 2" },
-                { label: "PART 4: SCHEDULING (CH 9)", value: "PART 4" },
-              ].map((f) => (
+              {bank.partFilters.map((f) => (
                 <button
                   key={f.value}
                   type="button"
@@ -586,34 +620,35 @@ export function TryoutEtsQuiz({
             </div>
           </div>
 
-          {/* Master Full Tryout ETS Banner Card */}
-          <div className="ryoku-border mb-8 overflow-hidden bg-gradient-to-r from-[#171413] via-[#101010] to-[#1a1210] p-6 tactical-glow sm:p-7">
+          {/* Master Full Tryout Banner Card */}
+          <div className="ryoku-border mb-8 overflow-hidden bg-white/[0.02] p-6  sm:p-7">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div className="max-w-3xl">
                 <div className="flex flex-wrap items-center gap-2.5">
                   <span className="flex items-center gap-1 border border-[#f2a89e]/80 bg-[#f2a89e]/20 px-2.5 py-0.5 font-mono text-[0.62rem] font-bold tracking-[0.2em] text-[#f8cdc7]">
-                    <Flame className="size-3 text-[#f2a89e]" /> FULL ETS SIMULATION MODE
+                    <Flame className="size-3 text-[#f2a89e]" /> {bank.simulationBadge}
                   </span>
                   <span className="font-mono text-[0.6rem] text-[#9d9992] tracking-wider">
-                    7 CHAPTERS • 117 QUESTIONS COMBINED
+                    {chapters.length} CHAPTERS • {questions.length} QUESTIONS COMBINED
                   </span>
                 </div>
                 <h3 className="mt-2.5 font-[family-name:var(--font-display)] text-xl font-medium tracking-tight text-[#f0e9df] sm:text-2xl">
-                  Simulasi Komprehensif ETS (Semua 117 Soal)
+                  {bank.simulationTitle}
                 </h3>
                 <p className="mt-1.5 text-xs leading-5 text-[#aaa69f]">
-                  Uji kemampuanmu secara menyeluruh seperti menghadapi ujian ETS sesungguhnya.
-                  Progres jawaban tersimpan otomatis di perangkatmu dan dapat dilanjutkan kapan saja.
+                  {bank.simulationDescription}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-4 font-mono text-xs text-[#cfc8bd]">
                   <span className="flex items-center gap-1.5">
-                    <span className="size-1.5 bg-[#f2a89e]" /> 117 Soal Total
+                    <span className="size-1.5 bg-[#f2a89e]" /> {questions.length} Soal Total
                   </span>
+                  {bank.recommendedTime && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="size-1.5 bg-cyan-400" /> Waktu Rekomendasi: {bank.recommendedTime}
+                    </span>
+                  )}
                   <span className="flex items-center gap-1.5">
-                    <span className="size-1.5 bg-cyan-400" /> Waktu Rekomendasi: ~90 Menit
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="size-1.5 bg-emerald-400" /> Terjawab: {totalAllAnswered}/117 ({totalAllProgress}%)
+                    <span className="size-1.5 bg-emerald-400" /> Terjawab: {totalAllAnswered}/{questions.length} ({totalAllProgress}%)
                   </span>
                 </div>
               </div>
@@ -624,7 +659,7 @@ export function TryoutEtsQuiz({
                 className="group flex items-center gap-2 border border-[#f2a89e] bg-[#f2a89e] px-6 py-3.5 font-mono text-xs font-bold tracking-[0.18em] text-[#171311] transition-all hover:bg-[#f8c2ba] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f0e9df]"
               >
                 <Sparkles className="size-4 transition-transform group-hover:scale-110" />
-                MULAI SIMULASI PENUH (117 SOAL)
+                MULAI SIMULASI PENUH ({questions.length} SOAL)
               </button>
             </div>
           </div>
@@ -773,7 +808,6 @@ export function TryoutEtsQuiz({
   if (totalQuestions === 0) {
     return (
       <section className="relative grid min-h-[32rem] place-items-center overflow-hidden border border-white/10 bg-[#080808] p-6 text-[#e8e0d1]">
-        <div aria-hidden="true" className="ryoku-grid absolute inset-0 opacity-50" />
         <div className="ryoku-border relative max-w-md bg-[#0f0f0f]/95 p-8 text-center">
           <CircleDashed className="mx-auto mb-4 size-8 text-[#f2a89e]" aria-hidden="true" />
           <p className="font-mono text-[0.64rem] font-semibold tracking-[0.28em] text-[#9d9992]">
@@ -804,18 +838,15 @@ export function TryoutEtsQuiz({
 
   const activeTitle = currentChapter
     ? `CHAPTER ${currentChapter.number}: ${currentChapter.title.toUpperCase()}`
-    : "SIMULASI PENUH ETS // SEMUA CHAPTER (117 SOAL)"
+    : `SIMULASI PENUH ${bank.bankTag} // SEMUA CHAPTER (${questions.length} SOAL)`
 
   // VIEW 2: RESULTS DOSSIER FOR CHAPTER
   if (isCurrentSubmitted && !isReviewMode) {
     return (
       <section className="relative min-h-svh overflow-hidden bg-[#080808] text-[#e8e0d1]">
-        <div aria-hidden="true" className="ryoku-grid pointer-events-none absolute inset-0 opacity-40" />
-        <div aria-hidden="true" className="ryoku-scanline pointer-events-none absolute inset-0 opacity-70" />
-
         {/* Top bar */}
         <header className="relative border-b border-white/10 bg-[#0d0d0d]/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
-          <div className="mx-auto flex max-w-[96rem] items-center justify-between gap-4">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
             <button
               type="button"
               onClick={handleBackToHub}
@@ -836,7 +867,7 @@ export function TryoutEtsQuiz({
           flaggedCount={flagged.filter((id) => activeQuestions.some((q) => q.id === id)).length}
           hasNextChapter={
             selectedChapterId !== "all" &&
-            tryoutChapters.findIndex((c) => c.id === selectedChapterId) < tryoutChapters.length - 1
+            chapters.findIndex((c) => c.id === selectedChapterId) < chapters.length - 1
           }
           onNextChapter={handleNextChapter}
           onRestart={restartCurrentChapter}
@@ -844,6 +875,7 @@ export function TryoutEtsQuiz({
           onReview={() => setIsReviewMode(true)}
           questions={activeQuestions}
           scorePercent={scorePercent}
+          syllabusFooter={bank.syllabusFooter}
           totalQuestions={totalQuestions}
         />
       </section>
@@ -856,12 +888,9 @@ export function TryoutEtsQuiz({
       aria-label={`${activeTitle} practice quiz`}
       className="relative min-h-svh overflow-hidden bg-[#080808] text-[#e8e0d1]"
     >
-      <div aria-hidden="true" className="ryoku-grid pointer-events-none absolute inset-0 opacity-40" />
-      <div aria-hidden="true" className="ryoku-scanline pointer-events-none absolute inset-0 opacity-70" />
-
       {/* Top Header HUD with Chapter Switcher Dropdown */}
       <header className="relative border-b border-white/10 bg-[#0d0d0d]/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-[96rem] flex-wrap items-center justify-between gap-4">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -877,8 +906,8 @@ export function TryoutEtsQuiz({
               onChange={(e) => handleSelectChapter(e.target.value)}
               className="hidden sm:block border border-white/15 bg-[#121212] px-2.5 py-1.5 font-mono text-[0.65rem] text-[#e8e0d1] focus:border-[#f2a89e] focus:outline-none"
             >
-              <option value="all">★ FULL SIMULASI ETS (117 SOAL)</option>
-              {tryoutChapters.map((c) => (
+              <option value="all">★ FULL SIMULASI {bank.bankTag} ({questions.length} SOAL)</option>
+              {chapters.map((c) => (
                 <option key={c.id} value={c.id}>
                   Ch. {c.number}: {c.title} ({c.questionCount} Soal)
                 </option>
@@ -887,7 +916,7 @@ export function TryoutEtsQuiz({
 
             <div className="min-w-0">
               <p className="font-mono text-[0.52rem] font-bold tracking-[0.25em] text-[#9d9992]">
-                {`${currentChapter?.part ?? "FULL EXAMINATION"} // ETS-NODE 01`}
+                {`${currentChapter?.part ?? "FULL EXAMINATION"} // ${bank.bankTag}-NODE 01`}
               </p>
               <h1 className="truncate font-[family-name:var(--font-display)] text-base font-medium tracking-[0.04em] text-[#f0e9df] sm:text-lg">
                 {activeTitle}
@@ -965,7 +994,7 @@ export function TryoutEtsQuiz({
         </div>
       )}
 
-      <div className="relative mx-auto grid max-w-[96rem] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(17rem,21rem)_minmax(0,1fr)] lg:gap-6 lg:px-8 lg:py-7">
+      <div className="relative mx-auto grid max-w-5xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(17rem,21rem)_minmax(0,1fr)] lg:gap-6 lg:px-8 lg:py-7">
         {/* Sidebar Question Map */}
         <aside className="order-2 min-w-0 lg:order-1">
           <div className="ryoku-border bg-[#0d0d0d]/95 p-4 sm:p-5 lg:sticky lg:top-6">
@@ -975,7 +1004,7 @@ export function TryoutEtsQuiz({
                   ACTIVE EXAM DOSSIER
                 </p>
                 <h2 className="mt-1 font-[family-name:var(--font-display)] text-lg tracking-wide text-[#f0e9df]">
-                  {currentChapter ? `BAB ${currentChapter.number}` : "ALL 117 SOAL"}
+                  {currentChapter ? `BAB ${currentChapter.number}` : `ALL ${totalQuestions} SOAL`}
                 </h2>
               </div>
               <div className="flex size-7 items-center justify-center border border-[#f2a89e]/50 bg-[#f2a89e]/10 text-[#f2a89e]">
@@ -1258,7 +1287,7 @@ export function TryoutEtsQuiz({
                           optionStyle = "border-white/5 bg-transparent text-[#6e6b66] opacity-50"
                         }
                       } else if (isSelected) {
-                        optionStyle = "border-[#f2a89e] bg-[#f2a89e]/10 text-[#f6ebe3] tactical-glow"
+                        optionStyle = "border-[#f2a89e] bg-[#f2a89e]/10 text-[#f6ebe3] "
                         bracketStyle = "border-[#f2a89e] bg-[#f2a89e] text-black font-bold"
                       }
 
@@ -1322,6 +1351,21 @@ export function TryoutEtsQuiz({
                   <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                   Tidak ada opsi jawaban tersedia untuk pertanyaan ini.
                 </div>
+              )}
+
+              {/* Pembahasan: only banks whose questions carry explanations (EAS) */}
+              {isReviewMode && currentQuestion.explanation && (
+                <RichExplanationCard
+                  questionId={currentQuestion.id}
+                  questionText={currentQuestion.text}
+                  options={currentQuestion.options}
+                  selectedAnswers={currentAnswers}
+                  correctAnswers={currentCorrectAnswers}
+                  explanation={currentQuestion.explanation}
+                  sectionTitle={currentQuestion.sectionTitle}
+                  chapterTitle={currentQuestion.chapterTitle}
+                  isCorrect={isCurrentCorrect}
+                />
               )}
 
               {/* Submit warning banner */}
@@ -1420,8 +1464,9 @@ type ResultsDossierProps = {
   onRestart: () => void
   onReturnToHub: () => void
   onReview: () => void
-  questions: TryoutEtsQuestion[]
+  questions: QuizQuestion[]
   scorePercent: number
+  syllabusFooter: string
   totalQuestions: number
 }
 
@@ -1439,13 +1484,14 @@ function ResultsDossier({
   onReview,
   questions,
   scorePercent,
+  syllabusFooter,
   totalQuestions,
 }: ResultsDossierProps) {
   const unansweredCount = totalQuestions - answeredCount
   const grade = getGradeBadge(scorePercent)
 
   return (
-    <main className="relative mx-auto max-w-[72rem] px-4 py-7 sm:px-6 sm:py-10">
+    <main className="relative mx-auto max-w-3xl px-4 py-7 sm:px-6 sm:py-10">
       <article aria-live="polite" className="ryoku-border overflow-hidden bg-[#0d0d0d]/95 shadow-2xl shadow-black/40">
         {/* Header Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-white/[0.02] px-5 py-3 sm:px-7">
@@ -1465,7 +1511,7 @@ function ResultsDossier({
         <div className="grid gap-8 px-5 py-8 sm:px-7 sm:py-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-10 lg:px-10">
           <div>
             <div className="flex items-start gap-4">
-              <div className="flex size-12 shrink-0 items-center justify-center border border-[#f2a89e]/60 bg-[#f2a89e]/10 text-[#f2a89e] tactical-glow">
+              <div className="flex size-12 shrink-0 items-center justify-center border border-[#f2a89e]/60 bg-[#f2a89e]/10 text-[#f2a89e] ">
                 <Trophy className="size-6" />
               </div>
               <div>
@@ -1619,7 +1665,7 @@ function ResultsDossier({
         </div>
 
         <div className="flex items-center justify-between border-t border-white/10 bg-white/[0.01] px-5 py-3 font-mono text-[0.52rem] text-[#77736d] sm:px-7">
-          <span>TRYOUT-ETS // SILABUS WILLIAM STALLINGS</span>
+          <span>{syllabusFooter}</span>
           <span>RYOKU ENGINE v2.5 • IOSEVKA NF</span>
         </div>
       </article>
