@@ -1,42 +1,0 @@
- *
-͔D"
-call_792395run_command{"CommandLine":"python3 -c '\nimport sqlite3\n\nconn = sqlite3.connect(\"/home/ararya/.gemini/antigravity-acp/conversations/f205ced5-c446-45f0-9a10-ccd163537331.db\")\ncursor = conn.cursor()\ncursor.execute(\"SELECT idx, step_payload FROM steps ORDER BY idx DESC LIMIT 10;\")\nfor idx, payload in cursor.fetchall():\n    try:\n        text = payload.decode(\"utf-8\", errors=\"ignore\")\n        if \"Question 1\" in text and \"Question 240\" in text:\n            print(f\"Found matching step at idx {idx}! Size: {len(text)}\")\n            with open(\"scripts/raw_prompt.txt\", \"w\") as f:\n                f.write(text)\n            break\n    except Exception as e:\n        print(\"Error:\", e)\n'","Cwd":"/home/ararya/Documents/ryoku-quiz","WaitMsBeforeAsync":3000,"toolAction":"Extracting full raw prompt from step_payload","toolSummary":"Extract prompt from db"}:
-M2)핽,%r~VI:$u&]V{Lmnݥ@z;k`rr	QNְ=2kWL9YGPq;K!aV/<AoQ `/&etVkfHCzS_4jCXEuwW%CqmAnԀeJrun_command*CommandLine*Cwd*WaitMsBeforeAsync*
-toolAction*toolSummary2ϔʘT:ϔĘTXb$f205ced5-c446-45f0-9a10-ccd163537331Q
-$f205ced5-c446-45f0-9a10-ccd163537331J"$f205ced5-c446-45f0-9a10-ccd163537331ϔT. =2
-*/*Bgemini-3.8-flash-highh"
-ϔT
-ϔԙUExtract prompt from db,Extracting full raw prompt from step_payloadϔU
-!/home/ararya/Documents/ryoku-quizX`python3 -c '
-import sqlite3
-
-conn = sqlite3.connect("/home/ararya/.gemini/antigravity-acp/conversations/f205ced5-c446-45f0-9a10-ccd163537331.db")
-cursor = conn.cursor()
-cursor.execute("SELECT idx, step_payload FROM steps ORDER BY idx DESC LIMIT 10;")
-for idx, payload in cursor.fetchall():
-    try:
-        text = payload.decode("utf-8", errors="ignore")
-        if "Question 1" in text and "Question 240" in text:
-            print(f"Found matching step at idx {idx}! Size: {len(text)}")
-            with open("scripts/raw_prompt.txt", "w") as f:
-                f.write(text)
-            break
-    except Exception as e:
-        print("Error:", e)
-'python3 -c '
-import sqlite3
-
-conn = sqlite3.connect("/home/ararya/.gemini/antigravity-acp/conversations/f205ced5-c446-45f0-9a10-ccd163537331.db")
-cursor = conn.cursor()
-cursor.execute("SELECT idx, step_payload FROM steps ORDER BY idx DESC LIMIT 10;")
-for idx, payload in cursor.fetchall():
-    try:
-        text = payload.decode("utf-8", errors="ignore")
-        if "Question 1" in text and "Question 240" in text:
-            print(f"Found matching step at idx {idx}! Size: {len(text)}")
-            with open("scripts/raw_prompt.txt", "w") as f:
-                f.write(text)
-            break
-    except Exception as e:
-        print("Error:", e)
-'
