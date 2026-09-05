@@ -1,0 +1,399 @@
+Question 1
+When describing the Internet, one approach is the “nuts-and-bolts” view that emphasizes hardware and software. Which of the following is included in this description?
+Select one:
+a. Programming languages like Python and Java.
+b. Servers, routers, and communication links.
+c. Application design principles exclusively.
+d. Only wireless devices.
+e. IP addressing conventions only.
+f. Social media platforms.
+
+Question 2
+IMAP supports advanced features not in POP3. Which is one of its advantages?
+Select one:
+a. Tunneling
+b. Folder Management
+c. Push Mail
+d. Caching
+e. Statelessness
+f. Compression
+
+Question 3
+In enterprise or campus networks, end systems are typically connected using which technology?
+Select one:
+a. Peer-to-peer wireless links only
+b. Public Wi‑Fi hotspots
+c. Bluetooth connections
+d. Satellite communication
+e. Ethernet switches that link hosts within buildings and across campuses.
+f. Coaxial TV lines
+
+Question 4
+When congestion is uncontrolled, throughput collapses. Why?
+Select one:
+a. UDP overtakes TCP flows
+b. Routers drop headers only
+c. Port numbers conflict
+d. Sequence numbers reset incorrectly
+e. Most transmitted packets are retransmissions and get dropped
+f. TCP windows become infinite
+
+Question 5
+Servers provide feedback using status codes grouped into categories such as informational, success, redirection, client error, and server error. Which code indicates that the requested resource could not be found?
+Select one:
+a. 502 Bad Gateway
+b. 100 Continue
+c. 403 Forbidden
+d. 404 Not Found
+e. 200 OK
+f. 301 Moved Permanently
+
+Question 6
+In SR, the sender window size must be carefully chosen. What happens if the window size is too large relative to sequence number space?
+Select one:
+a. UDP will replace TCP
+b. ACKs will be cumulative
+c. The receiver may confuse new packets with old ones
+d. Congestion will collapse
+e. It wastes buffer memory
+f. The sender will stop transmitting
+
+Question 7
+Internet communication requires agreement on how information is exchanged. Which organization develops Internet standards such as TCP/IP?
+Select one:
+a. IEEE
+b. ISO
+c. ICANN
+d. IETF
+e. ITU
+f. W3C
+
+Question 8
+To avoid ambiguity between new and old packets, the SR window size must be at most half the sequence number space. If sequence numbers are 0–7, what is the maximum SR window size?
+Select one:
+a. 3
+b. 7
+c. 6
+d. 2
+e. 4
+f. 5
+
+Question 9
+Host A sends a 1,500‑byte packet over a single 10 Mbps link, distance = 100 km, propagation speed 2.5×10^8 m/s. What is total delay (transmission + propagation)?
+Select one:
+a. 4 ms
+b. 2 ms
+c. 1.5 ms
+d. 5 ms
+e. 1 ms
+f. 1.2 ms
+
+Question 10
+Each socket is identified by an IP address and what additional element?
+Select one:
+a. Domain Name
+b. MAC Address
+c. Port Number
+d. URL
+e. Hostname
+f. Protocol
+
+Question 11
+Some applications use sockets configured so that calls return immediately, even if the operation is not complete. What is this called?
+Select one:
+a. Flow Control
+b. Queued I/O
+c. Nonblocking I/O
+d. Parallel I/O
+e. Secure I/O
+f. Blocking I/O
+
+Question 12
+Peer-to-peer systems distribute file transfer responsibilities across users. What is the main advantage of this design?
+Select one:
+a. Simplicity
+b. Single Point of Control
+c. Lower Reliability
+d. Lower Security
+e. Centralization
+f. Scalability
+
+Question 13
+Suppose TCP measures a SampleRTT of 120 ms. The current EstimatedRTT is 100 ms, and α = 0.125 (1/8). TCP updates EstimatedRTT using: EstimatedRTT = (1 – α) × EstimatedRTT + α × SampleRTT. What is the new EstimatedRTT?
+Select one:
+a. 105 ms
+b. 103 ms
+c. 110 ms
+d. 115 ms
+e. 102.5 ms
+f. 101 ms
+
+Question 14
+The total end-to-end delay includes several components. Which of the following is NOT one of them?
+Select one:
+a. Propagation delay
+b. Processing delay
+c. Queuing delay
+d. All four are included
+e. Storage delay
+f. Transmission delay
+
+Question 15
+By default, FTP servers open data connections from which TCP port?
+Select one:
+a. 20
+b. 8080
+c. 25
+d. 110
+e. 443
+f. 21
+
+Question 16
+The Internet is described as the largest engineered system with billions of users and devices ranging from laptops to washing machines. This raises questions about whether its complexity can be systematically understood. Which of the following best captures the book’s position?
+Select one:
+a. The Internet is too complex to study in a structured way.
+b. Its principles cannot be generalized beyond small networks.
+c. Learning about it is purely theoretical and not enjoyable.
+d. Its study is limited to hardware engineers only.
+e. Guiding principles and structure exist to make it comprehensible.
+f. Only experts with decades of experience can understand it.
+
+Question 17
+Protocol rdt2.0 introduces ACK and NAK messages to handle corrupted packets. What type of protocol is rdt2.0?
+Select one:
+a. Store-and-forward
+b. Sliding window
+c. Pipelined selective repeat
+d. Stop-and-wait
+e. Circuit-switched
+f. Go-back-N
+
+Question 18
+TCP sequence numbers indicate the first byte in a segment. If a segment has 1000 bytes and the first byte is numbered 5000, what is the sequence number of the next segment?
+Select one:
+a. 6000
+b. 5000
+c. 5999
+d. 1000
+e. 4000
+f. 501
+
+Question 19
+A packet of length 1,500 bytes is sent over a link of rate 1.5 Mbps. What is the transmission delay?
+Select one:
+a. 20 ms
+b. 1 ms
+c. 12 ms
+d. 16 ms
+e. 8 ms
+f. 4 ms
+
+Question 20
+Each layer has its own unit of data. Which pairing is correct?
+Select one:
+a. Link layer – segment
+b. Transport layer – frame
+c. Application layer – bit
+d. Transport layer – packet (not segment)
+e. Physical layer – message
+f. Network layer – datagram
+
+Question 21
+On the server side, after binding, a socket is placed in a state where it waits for incoming connections. Which operation achieves this?
+Select one:
+a. Bind
+b. Listen
+c. Attach
+d. Connect
+e. Accept
+f. Queue
+
+Question 22
+By default, FTP servers listen for control connections on which TCP port?
+Select one:
+a. 80
+b. 110
+c. 20
+d. 21
+e. 25
+f. 53
+
+Question 23
+Stop-and-wait suffers from low performance in high-speed networks with long RTT. What concept improves utilization by sending multiple packets without waiting?
+Select one:
+a. Multiplexing
+b. Packet flooding
+c. Circuit switching
+d. Pipelining
+e. Time division
+f. Frequency division
+
+Question 24
+As data travels down the protocol stack, headers are added. What is this process called?
+Select one:
+a. Tunneling only
+b. Translation
+c. Encryption
+d. Serialization
+e. Decapsulation
+f. Encapsulation
+
+Question 25
+TCP uses cumulative acknowledgments. What does ACK=6000 mean?
+Select one:
+a. Receiver discards sequence 6000
+b. Byte 6000 is missing
+c. Receiver has buffered byte 6000 only
+d. Receiver expects byte 6000 next
+e. Sender must resend byte 6000
+f. All bytes up to 6000 have been received
+
+Question 26
+In contrast, peers still downloading pieces of a file are called what?
+Select one:
+a. Indexers
+b. Mirrors
+c. Trackers
+d. Hubs
+e. Leechers
+f. Seeds
+
+Question 27
+Large-scale content providers often replicate content across multiple geographically distributed servers. What is this network called?
+Select one:
+a. ISP
+b. VPN
+c. Backbone
+d. P2P
+e. Proxy
+f. CDN
+
+Question 28
+Unlike UDP, TCP sockets are identified by a four-tuple consisting of source and destination IP addresses and ports. What is the benefit of using a four-tuple for TCP socket identification?
+Select one:
+a. It reduces memory usage in servers
+b. It allows multiple connections to the same server port from different clients
+c. It reduces header overhead
+d. It ensures congestion control is disabled
+e. It prevents demultiplexing errors at routers
+f. It enables encryption by default
+
+Question 29
+TCP provides reliable transfer using acknowledgments, timers, and retransmissions. What does TCP do if an ACK is not received before timeout?
+Select one:
+a. It closes the connection
+b. It sends a NAK instead
+c. It discards the sequence number
+d. It re-establishes the connection
+e. It resets the window size to zero
+f. It retransmits the unacknowledged segment
+
+Question 30
+This application protocol allows transfer of files between client and server and uses separate control and data connections. What is it called?
+Select one:
+a. SMTP
+b. HTTP
+c. TFTP
+d. SCP
+e. FTP
+f. SFTP
+
+Question 31
+TCP sockets ensure data is delivered in order and without loss. Which mechanism primarily provides this guarantee?
+Select one:
+a. Flow Labels
+b. Encryption
+c. Checksums
+d. Acknowledgments and Retransmissions
+e. Ports
+f. Caching
+
+Question 32
+The network layer provides logical communication between hosts, while the transport layer provides logical communication between processes. Using the household analogy, Ann and Bill collect and distribute letters within their homes, while the postal service delivers mail between houses. What does this analogy illustrate?
+Select one:
+a. The network layer operates only within one house
+b. The transport layer ensures only physical delivery
+c. The transport layer ensures process-to-process delivery while the network ensures host-to-host delivery
+d. The network layer ensures process-level delivery
+e. The transport layer handles router-to-router delivery
+f. Both layers are identical in scope
+
+Question 33
+TCP requires a connection to be established before data transfer. What is exchanged during this setup?
+Select one:
+a. Checksum fields only
+b. Control segments to synchronize state variables
+c. ACK-only messages
+d. IP addresses and ports only
+e. Sequence numbers only
+f. Window sizes only
+
+Question 34
+TCP uses estimated RTT and timeout intervals for retransmissions. Why is adaptive timeout important?
+Select one:
+a. It avoids congestion collapse
+b. It prevents sequence number rollover
+c. It ensures timely retransmission without premature duplicates
+d. It guarantees zero packet loss
+e. It ensures port allocation fairness
+f. It eliminates the need for acknowledgments
+
+Question 35
+The naming system on the Internet is organized into multiple levels, including root, top-level domains, and authoritative servers. What do we call the highest level?
+Select one:
+a. Authoritative Server
+b. Root Server
+c. TLD Server
+d. Proxy Server
+e. Name Cache
+f. Resolver
+
+Question 36
+Consider a link capacity of 10 Mbps shared by 100 users. Each request is 1 MB. Without caching, average utilization approaches 80%. With caching (hit rate 60%), what is the new utilization?
+Select one:
+a. 20%
+b. 48%
+c. 60%
+d. 32%
+e. 80%
+f. 40%
+
+Question 37
+Which situation demonstrates a case where transmission delay dominates propagation delay?
+Select one:
+a. Medium link, equal rates
+b. Very long link, very high bandwidth
+c. Very short link, very high bandwidth
+d. Very short link, very low bandwidth
+e. Very long link, very low bandwidth
+f. Link with zero processing
+
+Question 38
+Consider a client whose access link has 2 Mbps bandwidth with an average RTT of 200 ms. The client requested 1 MB object. The object is cached locally with access delay = 20 ms. If the cache hit rate is 40%, what is the average response time?
+Select one:
+a. 3.228 s
+b. 4.208 s
+c. 1.708 s
+d. 2.528 s
+e. 3.828 s
+f. 5.228 s
+
+Question 39
+Internet-connected hosts can be infected with malicious software. Which term describes a device that is compromised and enrolled in a network of similar infected machines?
+Select one:
+a. Botnet member
+b. Honeypot
+c. Gateway node
+d. Firewall relay
+e. DNS resolver
+f. Proxy server
+
+Question 40
+In traditional socket programming, a process may wait until an operation completes before proceeding. What is this behavior called?
+Select one:
+a. Nonblocking I/O
+b. Blocking I/O
+c. Parallelism
+d. Multithreading
+e. Event-driven
+f. Asynchronous I/O
