@@ -5,11 +5,14 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-brand: #8839ef;
+  --color-brand-hover: #ea76cb;
+  --color-app-bg: #eff1f5;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
-  --font-display: var(--font-instrument-sans), sans-serif;
+  --font-sans: "Iosevka", ui-monospace, monospace;
+  --font-mono: "Iosevka", ui-monospace, monospace;
+  --font-display: "Iosevka", ui-monospace, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -46,72 +49,100 @@
 }
 
 :root {
-  --background: oklch(0.09 0 0);
-  --foreground: oklch(0.95 0.015 85);
-  --card: oklch(0.12 0 0);
-  --card-foreground: oklch(0.95 0.015 85);
-  --popover: oklch(0.13 0 0);
-  --popover-foreground: oklch(0.95 0.015 85);
-  --primary: oklch(0.95 0.015 85);
-  --primary-foreground: oklch(0.09 0 0);
-  --secondary: oklch(0.17 0 0);
-  --secondary-foreground: oklch(0.95 0.015 85);
-  --muted: oklch(0.16 0 0);
-  --muted-foreground: oklch(0.6 0 0);
-  --accent: oklch(0.18 0 0);
-  --accent-foreground: oklch(0.95 0.015 85);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.22 0 0);
-  --input: oklch(0.22 0 0);
-  --ring: oklch(0.5 0 0);
-  --chart-1: oklch(0.7 0 0);
-  --chart-2: oklch(0.55 0 0);
-  --chart-3: oklch(0.4 0 0);
-  --chart-4: oklch(0.3 0 0);
-  --chart-5: oklch(0.2 0 0);
-  --radius: 0.35rem;
-  --sidebar: oklch(0.09 0 0);
-  --sidebar-foreground: oklch(0.95 0.015 85);
-  --sidebar-primary: oklch(0.95 0.015 85);
-  --sidebar-primary-foreground: oklch(0.09 0 0);
-  --sidebar-accent: oklch(0.16 0 0);
-  --sidebar-accent-foreground: oklch(0.95 0.015 85);
-  --sidebar-border: oklch(0.2 0 0);
-  --sidebar-ring: oklch(0.5 0 0);
+  /* Catppuccin Latte — cheerful cartoony sticker land!
+     Cards: rounded-2xl, border-2, hard offset shadows.
+     Buttons: rounded-xl, border-2, bouncy hover. */
+  --ctp-base: #eff1f5;
+  --ctp-mantle: #e6e9ef;
+  --ctp-crust: #dce0e8;
+  --ctp-surface0: #ccd0da;
+  --ctp-surface1: #bcc0cc;
+  --ctp-overlay: #9ca0b0;
+  --ctp-subtext0: #6c6f85;
+  --ctp-text: #4c4f69;
+  --ctp-pink: #ea76cb;
+  --ctp-mauve: #8839ef;
+  --ctp-red: #d20f39;
+  --ctp-peach: #fe640b;
+  --ctp-yellow: #df8e1d;
+  --ctp-green: #40a02b;
+  --ctp-teal: #179299;
+  --ctp-sky: #04a5e5;
+  --ctp-blue: #1e66f5;
+  --ctp-lavender: #7287fd;
+  --ctp-flamingo: #dd7878;
+  --ctp-rosewater: #dc8a78;
+  --ctp-maroon: #e64553;
+  --its-bg: #eff1f5;
+  --its-primary: #8839ef;
+  --its-primary-hover: #ea76cb;
+  --its-border: #bcc0cc;
+  --background: #eff1f5;
+  --foreground: #4c4f69;
+  --card: #ffffff;
+  --card-foreground: #4c4f69;
+  --popover: #ffffff;
+  --popover-foreground: #4c4f69;
+  --primary: #8839ef;
+  --primary-foreground: #eff1f5;
+  --secondary: #dce0e8;
+  --secondary-foreground: #4c4f69;
+  --muted: #e6e9ef;
+  --muted-foreground: #6c6f85;
+  --accent: #ccd0da;
+  --accent-foreground: #4c4f69;
+  --destructive: #d20f39;
+  --border: #bcc0cc;
+  --input: #bcc0cc;
+  --ring: #8839ef;
+  --chart-1: #ea76cb;
+  --chart-2: #04a5e5;
+  --chart-3: #40a02b;
+  --chart-4: #df8e1d;
+  --chart-5: #7287fd;
+  --radius: 1rem;
+  --sidebar: #e6e9ef;
+  --sidebar-foreground: #4c4f69;
+  --sidebar-primary: #8839ef;
+  --sidebar-primary-foreground: #eff1f5;
+  --sidebar-accent: #dce0e8;
+  --sidebar-accent-foreground: #4c4f69;
+  --sidebar-border: #bcc0cc;
+  --sidebar-ring: #8839ef;
 }
 
 .dark {
-  --background: oklch(0.09 0 0);
-  --foreground: oklch(0.95 0.015 85);
-  --card: oklch(0.12 0 0);
-  --card-foreground: oklch(0.95 0.015 85);
-  --popover: oklch(0.13 0 0);
-  --popover-foreground: oklch(0.95 0.015 85);
-  --primary: oklch(0.95 0.015 85);
-  --primary-foreground: oklch(0.09 0 0);
-  --secondary: oklch(0.17 0 0);
-  --secondary-foreground: oklch(0.95 0.015 85);
-  --muted: oklch(0.16 0 0);
-  --muted-foreground: oklch(0.6 0 0);
-  --accent: oklch(0.18 0 0);
-  --accent-foreground: oklch(0.95 0.015 85);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.5 0 0);
-  --chart-1: oklch(0.7 0 0);
-  --chart-2: oklch(0.55 0 0);
-  --chart-3: oklch(0.4 0 0);
-  --chart-4: oklch(0.3 0 0);
-  --chart-5: oklch(0.2 0 0);
-  --sidebar: oklch(0.1 0 0);
-  --sidebar-foreground: oklch(0.95 0.015 85);
-  --sidebar-primary: oklch(0.95 0.015 85);
-  --sidebar-primary-foreground: oklch(0.09 0 0);
-  --sidebar-accent: oklch(0.16 0 0);
-  --sidebar-accent-foreground: oklch(0.95 0.015 85);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.5 0 0);
+  --background: #eff1f5;
+  --foreground: #4c4f69;
+  --card: #ffffff;
+  --card-foreground: #4c4f69;
+  --popover: #ffffff;
+  --popover-foreground: #4c4f69;
+  --primary: #8839ef;
+  --primary-foreground: #eff1f5;
+  --secondary: #dce0e8;
+  --secondary-foreground: #4c4f69;
+  --muted: #e6e9ef;
+  --muted-foreground: #6c6f85;
+  --accent: #ccd0da;
+  --accent-foreground: #4c4f69;
+  --destructive: #d20f39;
+  --border: #bcc0cc;
+  --input: #bcc0cc;
+  --ring: #8839ef;
+  --chart-1: #ea76cb;
+  --chart-2: #04a5e5;
+  --chart-3: #40a02b;
+  --chart-4: #df8e1d;
+  --chart-5: #7287fd;
+  --sidebar: #e6e9ef;
+  --sidebar-foreground: #4c4f69;
+  --sidebar-primary: #8839ef;
+  --sidebar-primary-foreground: #eff1f5;
+  --sidebar-accent: #dce0e8;
+  --sidebar-accent-foreground: #4c4f69;
+  --sidebar-border: #bcc0cc;
+  --sidebar-ring: #8839ef;
 }
 
 @layer base {
@@ -120,11 +151,11 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: var(--font-geist-sans), sans-serif;
+    font-family: "Iosevka", ui-monospace, monospace;
     font-feature-settings: "ss01" 1, "cv01" 1;
   }
   html {
-    font-family: var(--font-geist-sans), sans-serif;
+    font-family: "Iosevka", ui-monospace, monospace;
     scroll-behavior: smooth;
   }
   @media (prefers-reduced-motion: reduce) {
@@ -136,8 +167,8 @@
       scroll-behavior: auto !important;
     }
   }
-  :focus-visible { outline: 2px solid #d6ff62; outline-offset: 4px; }
-  ::selection { background: #d6ff62; color: #10110f; }
+  :focus-visible { outline: 3px solid #8839ef; outline-offset: 2px; border-radius: 8px; }
+  ::selection { background: #ea76cb; color: #4c4f69; }
   @media (prefers-reduced-motion: no-preference) {
     ::view-transition-old(root),
     ::view-transition-new(root) {
@@ -146,16 +177,45 @@
   }
 }
 
-/* Single shared surface: quiet 1px border used by quiz panels. */
-.ryoku-border { border: 1px solid oklch(1 0 0 / 10%); }
+/* Chunky sticker surface: thick outline — used by quiz panels. */
+.its-border { border: 2px solid #4c4f69; }
+.ryoku-border { border: 2px solid #4c4f69; }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: oklch(0.12 0 0); }
-::-webkit-scrollbar-thumb { background: oklch(0.25 0 0); border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: oklch(0.35 0 0); }
+/* Cartoony scrollbar — catppuccin! */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: #e6e9ef; border-radius: 999px; }
+::-webkit-scrollbar-thumb { background: #8839ef; border-radius: 999px; border: 2px solid #e6e9ef; }
+::-webkit-scrollbar-thumb:hover { background: #ea76cb; }
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px) scale(0.99); } to { opacity: 1; transform: none; } }
+@keyframes wiggle { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes pop-in { 0% { opacity: 0; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1); } }
 
 @layer utilities {
-  .animate-fade-in { animation: fadeIn 200ms ease-out both; }
+  .animate-fade-in { animation: fadeIn 250ms ease-out both; }
+  .animate-pop-in { animation: pop-in 250ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .animate-wiggle { animation: wiggle 1.2s ease-in-out infinite; }
+  .animate-floaty { animation: floaty 3s ease-in-out infinite; }
+  /* Sticker shadow helpers */
+  .sticker-shadow { box-shadow: 3px 3px 0 #4c4f69; }
+  .sticker-shadow-sm { box-shadow: 2px 2px 0 #4c4f69; }
+  .sticker-shadow-lg { box-shadow: 5px 5px 0 #4c4f69; }
+  /* Striped progress yumminess */
+  .stripes-fun {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.35) 0 8px,
+      transparent 8px 16px
+    );
+  }
+  /* Cute dot pattern for pastel banners */
+  .dots-fun {
+    background-image: radial-gradient(rgba(76, 79, 105, 0.22) 1.5px, transparent 1.5px);
+    background-size: 16px 16px;
+  }
+  .dots-light {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.5) 1.5px, transparent 1.5px);
+    background-size: 14px 14px;
+  }
 }

@@ -1,36 +1,33 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Instrument_Sans } from "next/font/google";
+import "@fontsource/iosevka/400.css";
+import "@fontsource/iosevka/500.css";
+import "@fontsource/iosevka/600.css";
+import "@fontsource/iosevka/700.css";
 import "katex/dist/katex.min.css";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const instrument = Instrument_Sans({
-  variable: "--font-instrument-sans",
-  subsets: ["latin"],
-});
+import { SiteNavbar } from "@/components/site-navbar";
 
 export const metadata: Metadata = {
-  title: "Ryoku — A space for curious minds",
+  title: "IHateITS — Kuis & Latihan Soal",
   description:
-    "Pahami setiap lapisan. Ruang belajar Sistem Operasi dan Jaringan Komputer dengan 357 soal, latihan per bab, simulasi, dan pembahasan EAS.",
+    "IHateITS: latihan kuis Sistem Operasi dan Jaringan Komputer per modul, simulasi ETS/EAS, dan pembahasan soal.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} ${instrument.variable} dark h-full antialiased`}
+      className="h-full antialiased"
+      style={{
+        fontFamily: '"Iosevka", ui-monospace, monospace',
+        backgroundColor: "#eff1f5",
+      }}
     >
-      <body className="min-h-full flex flex-col">
+      <body
+        className="min-h-full flex flex-col"
+        style={{ fontFamily: '"Iosevka", ui-monospace, monospace' }}
+      >
+        <SiteNavbar />
         {children}
       </body>
     </html>

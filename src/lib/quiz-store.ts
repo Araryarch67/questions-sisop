@@ -37,6 +37,6 @@ export const useQuizStore = create<QuizStore>()(
       reset: () => set({ answers: {}, startedAt: null }),
       addResult: (r) => set((s) => ({ history: [r, ...s.history].slice(0, 50) })),
     }),
-    { name: "ryoku-quiz-store" }
+    { name: "myits-classroom-quiz-store" }
   )
 );

@@ -2,18 +2,22 @@
 
 import { useMemo, useState } from "react";
 import {
-  CheckCircle2,
-  XCircle,
-  BookOpen,
-  Sparkles,
-  ChevronDown,
-  ChevronUp,
-  AlertCircle,
-  Lightbulb,
-  Copy,
-  Check,
-} from "lucide-react";
+  LuCircleCheck,
+  LuCircleX,
+  LuBookOpen,
+  LuSparkles,
+  LuChevronDown,
+  LuChevronUp,
+  LuCircleAlert,
+  LuLightbulb,
+  LuCopy,
+  LuCheck,
+} from "react-icons/lu";
 import { RichMathText } from "./rich-math-text";
+import { decodeUnicodeEscapes } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface RichExplanationCardProps {
   questionId: number;
@@ -71,7 +75,7 @@ export function RichExplanationCard({
 
   const handleCopy = () => {
     if (!explanation) return;
-    navigator.clipboard.writeText(explanation);
+    navigator.clipboard.writeText(decodeUnicodeEscapes(explanation));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -81,68 +85,70 @@ export function RichExplanationCard({
   const optionLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
   return (
-    <div className="mt-6 overflow-hidden rounded-md border border-white/15 bg-[#0e0e11]/90 backdrop-blur-xl shadow-2xl">
-      {/* Tactical Top Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-white/[0.02] px-4 py-3 sm:px-5">
+    <Card className="mt-6 gap-0 overflow-hidden bg-white py-0">
+      {/* Sticker Top Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#4c4f69] bg-[#e6e9ef] px-4 py-3 sm:px-5">
         <div className="flex items-center gap-2.5">
           <div
-            className={`flex size-6 items-center justify-center rounded border font-mono text-xs font-bold ${
-              isCorrect
-                ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-400"
-                : "border-rose-500/60 bg-rose-500/20 text-rose-400"
+            className={`flex size-8 -rotate-3 items-center justify-center rounded-xl border-2 border-[#4c4f69] font-mono text-xs font-bold shadow-[2px_2px_0_#4c4f69] ${
+              isCorrect ? "bg-[#40a02b] text-white" : "bg-[#e64553] text-white"
             }`}
           >
             {isCorrect ? (
-              <CheckCircle2 className="size-3.5" />
+              <LuCircleCheck className="size-3.5" />
             ) : (
-              <XCircle className="size-3.5" />
+              <LuCircleX className="size-3.5" />
             )}
           </div>
-          <span className="font-mono text-xs font-bold tracking-wider text-[#e8e0d1]">
-            {isCorrect ? "EVALUASI: JAWABAN TEPAT (+1)" : "EVALUASI: JAWABAN KELIRU (0)"}
+          <span className="text-sm font-bold tracking-tight text-[#4c4f69]">
+            {isCorrect ? "Jawaban tepat, keren!" : "Kurang tepat, gapapa!"}
           </span>
           {sectionTitle && (
-            <span className="hidden rounded border border-white/10 bg-black/40 px-2 py-0.5 font-mono text-[0.65rem] text-[#9d9992] md:inline-block">
+            <Badge variant="secondary" className="hidden px-2 py-0.5 text-[11px] md:inline-flex">
               {sectionTitle}
-            </span>
+            </Badge>
           )}
         </div>
 
         <div className="flex items-center gap-2">
           {explanation && (
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={handleCopy}
-              className={`flex items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-2.5 py-1 font-mono text-[0.62rem] transition-all duration-300 hover:border-white/30 hover:text-white ${copied ? "scale-105 text-emerald-400 border-emerald-500/30" : "text-[#b5afa6]"}`}
+              className={`flex items-center gap-1 rounded-xl border-2 bg-white px-2.5 py-1 text-[11px] font-bold ${copied ? "scale-105 border-[#4c4f69] text-[#40a02b]" : "border-[#4c4f69] text-[#6c6f85]"}`}
               title="Salin penjelasan ke clipboard"
             >
               {copied ? (
                 <>
-                  <Check className="size-3 text-emerald-400" /> TERSALIN
+                  <LuCheck className="size-3" /> Tersalin!
                 </>
               ) : (
                 <>
-                  <Copy className="size-3" /> SALIN TEKS
+                  <LuCopy className="size-3" /> Salin
                 </>
               )}
-            </button>
+            </Button>
           )}
 
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-2.5 py-1 font-mono text-[0.62rem] text-[#b5afa6] transition-colors hover:border-white/30 hover:text-white"
+            className="flex items-center gap-1 px-2.5 py-1 text-[11px] text-[#6c6f85]"
           >
             {isExpanded ? (
               <>
-                <ChevronUp className="size-3" /> SEMBUNYIKAN
+                <LuChevronUp className="size-3" /> Tutup
               </>
             ) : (
               <>
-                <ChevronDown className="size-3" /> BUKA DETAIL
+                <LuChevronDown className="size-3" /> Lihat detail!
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -157,18 +163,18 @@ export function RichExplanationCard({
           <div className="space-y-4 p-4 sm:p-5">
           {/* Answer Status Summary */}
           <div className="grid gap-2 text-xs sm:grid-cols-2">
-            <div className="rounded border border-emerald-500/30 bg-emerald-950/20 p-3">
-              <span className="font-mono text-[0.65rem] font-bold text-emerald-400 tracking-wider">
-                KUNCI JAWABAN BENAR:
+            <div className="rounded-2xl border-2 border-[#4c4f69] bg-[#40a02b]/10 p-3 shadow-[2px_2px_0_#4c4f69]">
+              <span className="text-[11px] font-bold text-[#40a02b]">
+                Kunci jawaban:
               </span>
-              <div className="mt-1 font-mono text-sm text-emerald-200">
+              <div className="mt-1 text-sm font-medium text-[#4c4f69]">
                 {correctAnswers.map((ansIdx) => {
                   const letter = optionLetters[ansIdx] || `${ansIdx + 1}`;
                   const text = options[ansIdx] || "";
                   return (
                     <div key={ansIdx} className="flex items-start gap-2">
                       <span className="font-bold">[{letter}]</span>
-                      <span className="font-sans text-xs leading-5 text-emerald-100">{text}</span>
+                      <span className="text-xs font-medium leading-5 text-[#4c4f69]">{text}</span>
                     </div>
                   );
                 })}
@@ -176,16 +182,16 @@ export function RichExplanationCard({
             </div>
 
             <div
-              className={`rounded border p-3 ${
+              className={`rounded-2xl border-2 p-3 ${
                 isCorrect
-                  ? "border-emerald-500/30 bg-emerald-950/20"
+                  ? "border-emerald-200 bg-emerald-50"
                   : selectedAnswers.length === 0
-                  ? "border-amber-500/30 bg-amber-950/20"
-                  : "border-rose-500/30 bg-rose-950/20"
+                  ? "border-amber-200 bg-amber-50"
+                  : "border-red-200 bg-red-50"
               }`}
             >
               <span
-                className={`font-mono text-[0.65rem] font-bold tracking-wider ${
+                className={`text-[11px] font-bold ${
                   isCorrect
                     ? "text-emerald-400"
                     : selectedAnswers.length === 0
@@ -193,11 +199,11 @@ export function RichExplanationCard({
                     : "text-rose-400"
                 }`}
               >
-                PILIHAN ANDA:
+                Jawaban kamu:
               </span>
-              <div className="mt-1 font-mono text-sm">
+              <div className="mt-1 text-sm">
                 {selectedAnswers.length === 0 ? (
-                  <span className="text-amber-300 italic text-xs">Belum dijawab (kosong)</span>
+                  <span className="text-amber-600 italic text-xs">Belum dijawab</span>
                 ) : (
                   selectedAnswers.map((ansIdx) => {
                     const letter = optionLetters[ansIdx] || `${ansIdx + 1}`;
@@ -207,7 +213,7 @@ export function RichExplanationCard({
                         <span className={`font-bold ${isCorrect ? "text-emerald-300" : "text-rose-300"}`}>
                           [{letter}]
                         </span>
-                        <span className="font-sans text-xs leading-5 text-[#d0c6bc]">{text}</span>
+                        <span className="text-xs leading-5 text-[#6c6f85]">{text}</span>
                       </div>
                     );
                   })
@@ -222,66 +228,66 @@ export function RichExplanationCard({
               {/* Section 1: Konsep Kunci */}
               {parsedSections.concept && (
                 <div
-                  className="rounded border border-amber-500/25 bg-amber-500/[0.04] p-3.5 text-xs text-[#e8dfd3]"
+                  className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-3.5 text-xs text-[#4c4f69]"
                 >
-                  <div className="mb-2 flex items-center gap-1.5 font-mono text-[0.7rem] font-bold tracking-wider text-amber-400">
-                    <BookOpen className="size-3.5" /> KONSEP KUNCI & BUKU REFERENSI
+                  <div className="mb-2 flex items-center gap-1.5 text-[14px] font-bold tracking-tight text-[#df8e1d]">
+                    <LuBookOpen className="size-4" /> Konsep kunci seru!
                   </div>
-                  <RichMathText content={parsedSections.concept} className="text-[#e2dad0] text-[0.82rem]" />
+                  <RichMathText content={parsedSections.concept} className="text-[#4c4f69] text-[0.82rem]" />
                 </div>
               )}
 
               {/* Section 2: Pembahasan Lengkap */}
               {parsedSections.discussion && (
                 <div
-                  className="rounded border border-sky-500/25 bg-sky-500/[0.03] p-3.5 text-xs text-[#dbe7f3]"
+                  className="rounded-2xl border-2 border-[#4c4f69] bg-blue-50 p-3.5 text-xs text-[#4c4f69]"
                 >
-                  <div className="mb-2 flex items-center gap-1.5 font-mono text-[0.7rem] font-bold tracking-wider text-sky-400">
-                    <Lightbulb className="size-3.5" /> PEMBAHASAN LENGKAP & DERIVASI
+                  <div className="mb-2 flex items-center gap-1.5 text-[13px] font-bold text-[#8839ef]">
+                    <LuLightbulb className="size-4" /> Pembahasan santai!
                   </div>
-                  <RichMathText content={parsedSections.discussion} className="text-[#d8e3ed] text-[0.82rem]" />
+                  <RichMathText content={parsedSections.discussion} className="text-[#4c4f69] text-[0.82rem]" />
                 </div>
               )}
 
               {/* Section 3: Analisis Opsi Lain */}
               {parsedSections.optionsAnalysis && (
                 <div
-                  className="rounded border border-rose-500/20 bg-rose-500/[0.02] p-3.5 text-xs text-[#edd4d2]"
+                  className="rounded-2xl border-2 border-red-200 bg-red-50 p-3.5 text-xs text-[#4c4f69]"
                 >
-                  <div className="mb-2 flex items-center gap-1.5 font-mono text-[0.7rem] font-bold tracking-wider text-rose-400">
-                    <AlertCircle className="size-3.5" /> ANALISIS OPSI LAIN (DISTRACTOR DECONSTRUCTION)
+                  <div className="mb-2 flex items-center gap-1.5 text-[13px] font-bold text-red-600">
+                    <LuCircleAlert className="size-4" /> Kenapa opsi lain salah?
                   </div>
-                  <RichMathText content={parsedSections.optionsAnalysis} className="text-[#ebd1cf] text-[0.82rem]" />
+                  <RichMathText content={parsedSections.optionsAnalysis} className="text-[#4c4f69] text-[0.82rem]" />
                 </div>
               )}
 
               {/* Section 4: Poin Penting */}
               {parsedSections.keyTakeaway && (
                 <div
-                  className="rounded border border-purple-500/30 bg-purple-500/[0.05] p-3.5 text-xs text-[#f1e6fc]"
+                  className="rounded-2xl border-2 border-[#4c4f69] bg-[#e6e9ef] p-3.5 text-xs text-[#4c4f69]"
                 >
-                  <div className="mb-1.5 flex items-center gap-1.5 font-mono text-[0.7rem] font-bold tracking-wider text-purple-300">
-                    <Sparkles className="size-3.5 text-purple-400" /> POIN PENTING & INTI RINGKASAN
+                  <div className="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-[#4c4f69]">
+                    <LuSparkles className="size-3.5 text-[#6c6f85]" /> Poin penting
                   </div>
-                  <RichMathText content={parsedSections.keyTakeaway} className="text-[#f5ebff] text-[0.82rem] font-medium" />
+                  <RichMathText content={parsedSections.keyTakeaway} className="text-[#4c4f69] text-[0.82rem] font-medium" />
                 </div>
               )}
             </div>
           ) : explanation ? (
-            <div className="rounded border border-white/10 bg-white/[0.02] p-4 text-xs">
-              <div className="mb-2 font-mono text-[0.68rem] font-bold text-[#b5afa6]">
-                CATATAN & PEMBAHASAN SOAL
+            <div className="rounded-2xl border-2 border-[#4c4f69] bg-[#e6e9ef] p-4 text-xs">
+              <div className="mb-2 font-mono text-[0.68rem] font-bold text-[#6c6f85]">
+                Pembahasan soal
               </div>
-              <RichMathText content={explanation} className="text-[#ded6cb] text-[0.82rem]" />
+              <RichMathText content={explanation} className="text-[#4c4f69] text-[0.82rem]" />
             </div>
           ) : (
-            <div className="rounded border border-white/10 bg-white/[0.01] p-3 font-mono text-xs text-[#8c8780]">
-              [INFO] Modul pembahasan rinci untuk nomor ini sedang diarsipkan dalam basis data. Kunci jawaban telah divalidasi sesuai silabus resmi.
+            <div className="rounded-2xl border-2 border-[#4c4f69] bg-[#e6e9ef] p-3 text-xs text-[#6c6f85]">
+              Ups, pembahasan rinci belum ada nih! Tapi kunci jawabannya udah bener kok.
             </div>
           )}
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

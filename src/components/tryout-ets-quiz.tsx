@@ -2,36 +2,41 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
-  AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
-  BookOpen,
-  CalendarClock,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  CircleAlert,
-  CircleCheck,
-  CircleDashed,
-  Clock,
-  Cpu,
-  Eye,
-  Filter,
-  Flame,
-  GitBranch,
-  Layers,
-  ListChecks,
-  Lock,
-  RefreshCw,
-  RotateCcw,
-  Search,
-  Send,
-  Sparkles,
-  Terminal,
-  Trophy,
-  X,
-  Zap,
-} from "lucide-react"
+  LuTriangleAlert,
+  LuArrowLeft,
+  LuArrowRight,
+  LuBookOpen,
+  LuCalendarClock,
+  LuCheck,
+  LuChevronLeft,
+  LuChevronRight,
+  LuCircleAlert,
+  LuCircleCheck,
+  LuCircleDashed,
+  LuClock,
+  LuCpu,
+  LuEye,
+  LuFileText,
+  LuFilter,
+  LuFlame,
+  LuGitBranch,
+  LuLayers,
+  LuBandage,
+  LuListChecks,
+  LuLock,
+  LuPartyPopper,
+  LuStar,
+  LuSwords,
+  LuRefreshCw,
+  LuRotateCcw,
+  LuSearch,
+  LuSend,
+  LuSparkles,
+  LuTerminal,
+  LuTrophy,
+  LuX,
+  LuZap,
+} from "react-icons/lu"
 import {
   type TryoutChapter,
   type TryoutEtsQuestion,
@@ -39,6 +44,29 @@ import {
   tryoutEtsQuestions,
 } from "@/lib/tryout-ets"
 import { RichExplanationCard } from "@/components/rich-explanation-card"
+import { CompetitiveMode } from "@/components/competitive-mode"
+import { FlashcardMode } from "@/components/flashcard-mode"
+import { DrillMode } from "@/components/drill-mode"
+import { decodeUnicodeEscapes } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
+import { Separator } from "@/components/ui/separator"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export type { TryoutChapter, TryoutEtsQuestion }
 
@@ -46,6 +74,9 @@ export type { TryoutChapter, TryoutEtsQuestion }
 export type QuizBankMeta = {
   bankTag: string
   subjectLine: string
+  lecturer?: string
+  semester?: string
+  courseDescription?: string
   moduleEyebrow: string
   hubDescription: string
   searchPlaceholder: string
@@ -60,19 +91,19 @@ export type QuizBankMeta = {
 
 export const etsBankMeta: QuizBankMeta = {
   bankTag: "ETS",
-  subjectLine: "SISTEM OPERASI & ARSITEKTUR",
-  moduleEyebrow: "MODUL PELATIHAN ETS // SILABUS WILLIAM STALLINGS",
+  subjectLine: "Sistem Operasi (M)",
+  moduleEyebrow: "Semester Gasal 2026/2027 • Kuis ETS",
   hubDescription:
-    "Soal tryout telah dipetakan secara terstruktur ke dalam 7 Bab silabus mata kuliah Sistem Operasi. Pilih bab yang ingin kamu kuasai, atau mulai simulasi penuh seluruh bab.",
-  searchPlaceholder: "Cari topik (DMA, Semaphore, PCB)...",
-  simulationBadge: "FULL ETS SIMULATION MODE",
-  simulationTitle: "Simulasi Komprehensif ETS (Semua 117 Soal)",
+    "Kumpulan kuis ETS Sistem Operasi per modul. Pilih modul yang ingin dikerjakan, atau mulai kuis komprehensif semua modul.",
+  searchPlaceholder: "Search modules",
+  simulationBadge: "KUIS KOMPREHENSIF ETS",
+  simulationTitle: "Kuis Komprehensif ETS (Semua 117 Soal)",
   simulationDescription:
-    "Uji kemampuanmu secara menyeluruh seperti menghadapi ujian ETS sesungguhnya. Progres jawaban tersimpan otomatis di perangkatmu dan dapat dilanjutkan kapan saja.",
+    "Kerjakan semua modul dalam satu kuis seperti di IHateITS. Progres tersimpan otomatis di perangkatmu.",
   recommendedTime: "~90 Menit",
-  syllabusFooter: "TRYOUT-ETS // SILABUS WILLIAM STALLINGS",
+  syllabusFooter: "IHateITS",
   partFilters: [
-    { label: "SEMUA BAB (7)", value: "ALL" },
+    { label: "SEMUA Modul (7)", value: "ALL" },
     { label: "PART 1: BACKGROUND (CH 1-2)", value: "PART 1" },
     { label: "PART 2: PROCESSES & THREADS (CH 3-6)", value: "PART 2" },
     { label: "PART 4: SCHEDULING (CH 9)", value: "PART 4" },
@@ -89,6 +120,14 @@ export type TryoutEtsQuizProps = {
   storagePrefix?: string
   title?: string
   initialChapterId?: string | null
+  /** When provided, hub chapter clicks navigate via router instead of internal setState. */
+  onSelectChapter?: (chapterId: string | "all") => void
+  /** When provided, hub study-mode clicks navigate via router instead of internal setState. */
+  onSelectSpecialMode?: (mode: "competitive" | "flashcards" | "drill") => void
+  initialSpecialMode?: "competitive" | "flashcards" | "drill" | null
+  /** When provided, runner "back" navigates via router instead of internal setState. */
+  onExitToHub?: () => void
+  onBackToCourses?: () => void
 }
 
 const optionLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -97,21 +136,21 @@ const optionLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 function getChapterIcon(id: string) {
   switch (id) {
     case "ch01":
-      return <Cpu className="size-5 text-[#38bdf8]" />
+      return <LuCpu className="size-5 text-[#04a5e5]" />
     case "ch02":
-      return <Terminal className="size-5 text-[#4ade80]" />
+      return <LuTerminal className="size-5 text-[#40a02b]" />
     case "ch03":
-      return <Layers className="size-5 text-[#facc15]" />
+      return <LuLayers className="size-5 text-[#df8e1d]" />
     case "ch04":
-      return <GitBranch className="size-5 text-[#a78bfa]" />
+      return <LuGitBranch className="size-5 text-[#8839ef]" />
     case "ch05":
-      return <Lock className="size-5 text-[#fb7185]" />
+      return <LuLock className="size-5 text-[#e64553]" />
     case "ch06":
-      return <AlertTriangle className="size-5 text-[#f97316]" />
+      return <LuTriangleAlert className="size-5 text-[#fe640b]" />
     case "ch09":
-      return <CalendarClock className="size-5 text-[#818cf8]" />
+      return <LuCalendarClock className="size-5 text-[#7287fd]" />
     default:
-      return <BookOpen className="size-5 text-[#f2a89e]" />
+      return <LuBookOpen className="size-5 text-[#8839ef]" />
   }
 }
 
@@ -119,21 +158,21 @@ function getChapterIcon(id: string) {
 function getChapterDifficulty(id: string): { label: string; color: string } {
   switch (id) {
     case "ch01":
-      return { label: "FOUNDATIONAL", color: "text-[#38bdf8] border-[#38bdf8]/40 bg-[#38bdf8]/10" }
+      return { label: "FOUNDATIONAL", color: "text-[#04a5e5] border-2 border-[#4c4f69] bg-white shadow-[2px_2px_0_#4c4f69]" }
     case "ch02":
-      return { label: "CORE ARCH", color: "text-[#4ade80] border-[#4ade80]/40 bg-[#4ade80]/10" }
+      return { label: "CORE ARCH", color: "text-[#40a02b] border-2 border-[#4c4f69] bg-white shadow-[2px_2px_0_#4c4f69]" }
     case "ch03":
-      return { label: "INTERMEDIATE", color: "text-[#facc15] border-[#facc15]/40 bg-[#facc15]/10" }
+      return { label: "INTERMEDIATE", color: "text-[#df8e1d] border-2 border-[#4c4f69] bg-white shadow-[2px_2px_0_#4c4f69]" }
     case "ch04":
-      return { label: "INTERMEDIATE", color: "text-[#a78bfa] border-[#a78bfa]/40 bg-[#a78bfa]/10" }
+      return { label: "INTERMEDIATE", color: "text-[#8839ef] border-2 border-[#4c4f69] bg-white shadow-[2px_2px_0_#4c4f69]" }
     case "ch05":
-      return { label: "ADVANCED", color: "text-[#fb7185] border-[#fb7185]/40 bg-[#fb7185]/10" }
+      return { label: "ADVANCED", color: "text-[#e64553] border-2 border-[#4c4f69] bg-white shadow-[2px_2px_0_#4c4f69]" }
     case "ch06":
-      return { label: "ADVANCED", color: "text-[#f97316] border-[#f97316]/40 bg-[#f97316]/10" }
+      return { label: "ADVANCED", color: "text-[#fe640b] border-2 border-[#4c4f69] bg-white shadow-[2px_2px_0_#4c4f69]" }
     case "ch09":
-      return { label: "CORE ALGO", color: "text-[#818cf8] border-[#818cf8]/40 bg-[#818cf8]/10" }
+      return { label: "CORE ALGO", color: "text-[#7287fd] border-2 border-[#4c4f69] bg-white shadow-[2px_2px_0_#4c4f69]" }
     default:
-      return { label: "COMPREHENSIVE", color: "text-[#f2a89e] border-[#f2a89e]/40 bg-[#f2a89e]/10" }
+      return { label: "COMPREHENSIVE", color: "text-[#8839ef] border-2 border-[#4c4f69] bg-white shadow-[2px_2px_0_#4c4f69]" }
   }
 }
 
@@ -155,26 +194,55 @@ function hasSameOptions(selected: number[], expected: number[]) {
 }
 
 function getGradeBadge(scorePercent: number) {
-  if (scorePercent >= 90) return { grade: "S-RANK", text: "PERFECT EXECUTION", color: "text-emerald-400 border-emerald-500 bg-emerald-500/15" }
-  if (scorePercent >= 80) return { grade: "A-GRADE", text: "EXCELLENT COMMAND", color: "text-teal-400 border-teal-500 bg-teal-500/15" }
-  if (scorePercent >= 70) return { grade: "B-GRADE", text: "COMPETENT PROTOCOL", color: "text-cyan-400 border-cyan-500 bg-cyan-500/15" }
-  if (scorePercent >= 55) return { grade: "C-GRADE", text: "MARGINAL PASS", color: "text-amber-400 border-amber-500 bg-amber-500/15" }
-  return { grade: "RE-TRAIN", text: "BELOW THRESHOLD", color: "text-rose-400 border-rose-500 bg-rose-500/15" }
+  if (scorePercent >= 90) return { grade: "Nilai S!", text: "WOW, sempurna banget!", color: "border-[#4c4f69] bg-[#40a02b] text-white shadow-[3px_3px_0_#4c4f69] -rotate-2" }
+  if (scorePercent >= 80) return { grade: "Nilai A!", text: "Keren banget, lanjutkan!", color: "border-[#4c4f69] bg-[#179299] text-white shadow-[3px_3px_0_#4c4f69] rotate-1" }
+  if (scorePercent >= 70) return { grade: "Nilai B!", text: "Udah oke, dikit lagi!", color: "border-[#4c4f69] bg-[#04a5e5] text-white shadow-[3px_3px_0_#4c4f69] -rotate-1" }
+  if (scorePercent >= 55) return { grade: "Nilai C!", text: "Lumayan! Gas lagi yuk!", color: "border-[#4c4f69] bg-[#df8e1d] text-white shadow-[3px_3px_0_#4c4f69] rotate-2" }
+  return { grade: "Coba lagi yuk!", text: "Gapapa, latihan bikin jago!", color: "border-[#4c4f69] bg-[#e64553] text-white shadow-[3px_3px_0_#4c4f69] -rotate-2" }
 }
 
 export function TryoutEtsQuiz({
   questions = tryoutEtsQuestions,
   chapters = tryoutChapters,
   bank = etsBankMeta,
-  storagePrefix = "ryoku_tryout",
-  title = "TRYOUT-ETS",
+  storagePrefix = "myits_classroom_ets",
+  title = "Kuis ETS",
   initialChapterId = null,
+  onSelectChapter,
+  onSelectSpecialMode,
+  initialSpecialMode = null,
+  onExitToHub,
+  onBackToCourses,
 }: TryoutEtsQuizProps) {
   const answersKey = `${storagePrefix}_answers`
   const flagsKey = `${storagePrefix}_flags`
-  // Navigation & State
-  const [selectedChapterId, setSelectedChapterId] = useState<string | null>(initialChapterId)
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const submittedKey = `${storagePrefix}_submitted`
+  const sessionKey = `${storagePrefix}_session`
+  // Hub-only mode (detail route): never auto-jump into the runner from a saved session.
+  const hubOnly = onSelectChapter != null
+  // Navigation & State (restored from localStorage so refresh never restarts from zero)
+  const [selectedChapterId, setSelectedChapterId] = useState<string | null>(() => {
+    if (hubOnly) return null
+    if (initialChapterId) return initialChapterId
+    if (typeof window === "undefined") return null
+    try {
+      const saved = localStorage.getItem(sessionKey)
+      return saved ? (JSON.parse(saved).chapterId ?? null) : null
+    } catch {
+      return null
+    }
+  })
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (hubOnly) return 0
+    if (typeof window === "undefined") return 0
+    try {
+      const saved = localStorage.getItem(sessionKey)
+      const idx = saved ? JSON.parse(saved).index : 0
+      return typeof idx === "number" && idx >= 0 ? idx : 0
+    } catch {
+      return 0
+    }
+  })
 
   // Initialize state with lazy localStorage reader
   const [answers, setAnswers] = useState<Record<number, number[]>>(() => {
@@ -197,14 +265,33 @@ export function TryoutEtsQuiz({
     }
   })
 
-  const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const [submittedChapters, setSubmittedChapters] = useState<Record<string, boolean>>({})
+  const [elapsedSeconds, setElapsedSeconds] = useState(() => {
+    if (hubOnly) return 0
+    if (typeof window === "undefined") return 0
+    try {
+      const saved = localStorage.getItem(sessionKey)
+      const secs = saved ? JSON.parse(saved).elapsed : 0
+      return typeof secs === "number" && secs >= 0 ? secs : 0
+    } catch {
+      return 0
+    }
+  })
+  const [submittedChapters, setSubmittedChapters] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") return {}
+    try {
+      const saved = localStorage.getItem(submittedKey)
+      return saved ? JSON.parse(saved) : {}
+    } catch {
+      return {}
+    }
+  })
   const [showSubmitNotice, setShowSubmitNotice] = useState(false)
   const [isReviewMode, setIsReviewMode] = useState(false)
   const [partFilter, setPartFilter] = useState<string>("ALL")
   const [searchQuery, setSearchQuery] = useState("")
-  const [sidebarFilter, setSidebarFilter] = useState<"ALL" | "ANSWERED" | "UNANSWERED" | "FLAGGED">("ALL")
-  const [reviewFilter, setReviewFilter] = useState<"ALL" | "WRONG" | "CORRECT" | "FLAGGED">("ALL")
+  const [infoExpanded, setInfoExpanded] = useState(false)
+  const [sidebarFilter, setSidebarFilter] = useState<"ALL" | "ANSWERED" | "UNANSWERED" | "Ragu">("ALL")
+  const [reviewFilter, setReviewFilter] = useState<"ALL" | "WRONG" | "CORRECT" | "Ragu">("ALL")
 
   // Sync to localStorage
   useEffect(() => {
@@ -218,6 +305,22 @@ export function TryoutEtsQuiz({
       localStorage.setItem(flagsKey, JSON.stringify(flagged))
     } catch {}
   }, [flagged, flagsKey])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(submittedKey, JSON.stringify(submittedChapters))
+    } catch {}
+  }, [submittedChapters, submittedKey])
+
+  // Persist session (chapter, position, timer) so refresh resumes mid-quiz
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        sessionKey,
+        JSON.stringify({ chapterId: selectedChapterId, index: currentIndex, elapsed: elapsedSeconds }),
+      )
+    } catch {}
+  }, [selectedChapterId, currentIndex, elapsedSeconds, sessionKey])
 
   // Active question set based on selected chapter
   const activeQuestions = useMemo(() => {
@@ -289,9 +392,46 @@ export function TryoutEtsQuiz({
     ? Math.round((totalAllAnswered / totalAllQuestions) * 100)
     : 0
 
+  // Study modes: modules (default) + competitive + flashcards + wrong-answer drill
+  const [specialMode, setSpecialMode] = useState<"competitive" | "flashcards" | "drill" | null>(
+    () => initialSpecialMode ?? null,
+  )
+  const exitSpecialMode = useCallback(() => {
+    if (onExitToHub) {
+      onExitToHub()
+      return
+    }
+    setSpecialMode(null)
+  }, [onExitToHub])
+
+  // Questions answered incorrectly at least once — fuel for the drill mode
+  const drillQuestions = useMemo(() => {
+    return questions.filter((question) => {
+      const selected = answers[question.id] ?? []
+      if (selected.length === 0) return false
+      const correct = question.answers ?? question.answerIndexes ?? []
+      return !hasSameOptions(selected, correct)
+    })
+  }, [answers, questions])
+
+  const clearDrillQuestions = useCallback(() => {
+    setAnswers((prev) => {
+      const next = { ...prev }
+      drillQuestions.forEach((q) => {
+        delete next[q.id]
+      })
+      return next
+    })
+  }, [drillQuestions])
+
   // Chapter navigation handlers
   const handleSelectChapter = (chapterId: string | "all") => {
+    if (onSelectChapter) {
+      onSelectChapter(chapterId)
+      return
+    }
     setSelectedChapterId(chapterId)
+    setSpecialMode(null)
     setCurrentIndex(0)
     setShowSubmitNotice(false)
     setIsReviewMode(false)
@@ -299,8 +439,21 @@ export function TryoutEtsQuiz({
     setReviewFilter("ALL")
   }
 
+  const handleSelectSpecialMode = (mode: "competitive" | "flashcards" | "drill") => {
+    if (onSelectSpecialMode) {
+      onSelectSpecialMode(mode)
+      return
+    }
+    setSpecialMode(mode)
+  }
+
   const handleBackToHub = () => {
+    if (onExitToHub) {
+      onExitToHub()
+      return
+    }
     setSelectedChapterId(null)
+    setSpecialMode(null)
     setShowSubmitNotice(false)
     setIsReviewMode(false)
   }
@@ -368,11 +521,11 @@ export function TryoutEtsQuiz({
         if (optIdx < currentQuestion.options.length) {
           selectOption(currentQuestion, optIdx)
         }
-      } else if (event.key === "ArrowRight" || key === "N") {
+      } else if (event.key === "LuArrowRight" || key === "N") {
         if (activeIndex < totalQuestions - 1) {
           goToQuestion(activeIndex + 1)
         }
-      } else if (event.key === "ArrowLeft" || key === "P") {
+      } else if (event.key === "LuArrowLeft" || key === "P") {
         if (activeIndex > 0) {
           goToQuestion(activeIndex - 1)
         }
@@ -442,6 +595,8 @@ export function TryoutEtsQuiz({
       try {
         localStorage.removeItem(answersKey)
         localStorage.removeItem(flagsKey)
+        localStorage.removeItem(submittedKey)
+        localStorage.removeItem(sessionKey)
       } catch {}
     }
   }
@@ -459,7 +614,7 @@ export function TryoutEtsQuiz({
     }
   }
 
-  // Filter chapters in the selection hub with search
+  // LuFilter chapters in the selection hub with search
   const filteredChapters = useMemo(() => {
     return chapters.filter((c) => {
       const matchesPart = partFilter === "ALL" || c.part.includes(partFilter)
@@ -486,7 +641,7 @@ export function TryoutEtsQuiz({
 
           if (reviewFilter === "WRONG") return !isRight
           if (reviewFilter === "CORRECT") return isRight
-          if (reviewFilter === "FLAGGED") return isFlg
+          if (reviewFilter === "Ragu") return isFlg
           return true
         }
 
@@ -494,308 +649,203 @@ export function TryoutEtsQuiz({
         const isFlg = flagged.includes(question.id)
         if (sidebarFilter === "ANSWERED") return isAns
         if (sidebarFilter === "UNANSWERED") return !isAns
-        if (sidebarFilter === "FLAGGED") return isFlg
+        if (sidebarFilter === "Ragu") return isFlg
         return true
       })
   }, [activeQuestions, answers, flagged, isReviewMode, reviewFilter, sidebarFilter])
 
-  // VIEW 1: CHAPTER SELECTION HUB
-  if (!selectedChapterId) {
+  // SPECIAL STUDY MODES — competitive / flashcards / wrong-answer drill
+  if (specialMode === "competitive") {
     return (
-      <section className="relative min-h-svh overflow-hidden bg-[#080808] text-[#e8e0d1]">
-        {/* Top Header HUD */}
-        <header className="relative border-b border-white/10 bg-[#0c0c0c]/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center border border-[#f2a89e]/60 bg-[#f2a89e]/10 text-[#f2a89e] ">
-                <Zap className="size-4" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[0.55rem] font-bold tracking-[0.28em] text-[#f2a89e]">
-                    RYOKU // SYSTEM v2.5 • IOSEVKA NF
-                  </span>
-                  <span className="inline-block size-1.5 animate-pulse rounded-full bg-emerald-400" />
-                  <span className="font-mono text-[0.55rem] text-emerald-400/90 tracking-wider">ONLINE</span>
+      <CompetitiveMode
+        questions={questions}
+        courseTitle={bank.subjectLine}
+        storagePrefix={storagePrefix}
+        onExit={exitSpecialMode}
+      />
+    )
+  }
+  if (specialMode === "flashcards") {
+    return (
+      <FlashcardMode
+        questions={questions}
+        courseTitle={bank.subjectLine}
+        storagePrefix={storagePrefix}
+        onExit={exitSpecialMode}
+      />
+    )
+  }
+  if (specialMode === "drill") {
+    return (
+      <DrillMode
+        questions={drillQuestions}
+        allQuestions={questions}
+        courseTitle={bank.subjectLine}
+        onExit={exitSpecialMode}
+        onClearDrill={clearDrillQuestions}
+      />
+    )
+  }
+
+  // VIEW 1: COURSE DETAIL (course page) — chapter list inside the course
+  if (!selectedChapterId) {
+    const semester = bank.semester ?? "Semester Gasal 2026/2027"
+    const courseDesc = bank.courseDescription ?? bank.hubDescription
+    return (
+      <section className="min-h-svh bg-[#eff1f5] text-[#4c4f69]">
+        <main className="mx-auto max-w-6xl px-4 py-6">
+          {onBackToCourses && (
+            <Button type="button" variant="ghost" onClick={onBackToCourses}
+              className="mb-3 flex items-center gap-1.5 text-[13px] font-bold hover:underline">
+              <LuArrowLeft className="size-4" /> My courses
+            </Button>
+          )}
+          <p className="truncate text-[11px] text-[#6c6f85]">
+            ITS / Sarjana / FTEIC / S-1 RPL / {semester}
+          </p>
+
+          {/* Banner — pastel sticker party! */}
+          <div className={`relative mt-3 overflow-hidden rounded-2xl border-2 border-[#4c4f69] shadow-[5px_5px_0_#4c4f69] ${bank.bankTag === "EAS" ? "bg-[#04a5e5]" : "bg-[#ea76cb]"} dots-light`}>
+            <div className="absolute right-5 top-5 rotate-12 rounded-2xl border-2 border-[#4c4f69] bg-white/50 px-3 py-1.5 text-[#ea76cb]" aria-hidden="true"><LuPartyPopper className="size-7" /></div>
+            <div className="absolute bottom-5 right-24 -rotate-12 rounded-full border-2 border-[#4c4f69] bg-white/50 px-2.5 py-1 text-[#df8e1d]" aria-hidden="true"><LuStar className="size-5" /></div>
+            <div className="relative p-6 sm:p-8">
+              <span className="inline-block -rotate-2 rounded-full border-2 border-[#4c4f69] bg-white px-2.5 py-1 text-[11px] font-bold text-[#4c4f69] shadow-[2px_2px_0_#4c4f69]">{semester}</span>
+              <h1 className="mt-3 text-3xl font-bold tracking-tight text-white drop-shadow-[2px_2px_0_#4c4f69] sm:text-4xl">{bank.subjectLine}</h1>
+              <p className="mt-1 text-sm font-bold text-white/95">Yuk belajar sambil main — {totalAllAnswered}/{totalAllQuestions} soal udah dijawab!</p>
+              <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div className="w-full max-w-xs rounded-2xl border-2 border-[#4c4f69] bg-white p-3.5 shadow-[3px_3px_0_#4c4f69]">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-xs font-bold text-[#4c4f69]">Progres course</p>
+                    <p className="text-lg font-bold tabular-nums text-[#8839ef]">{totalAllProgress}%</p>
+                  </div>
+                  <div className="mt-2 h-4 overflow-hidden rounded-full border-2 border-[#4c4f69] bg-[#e6e9ef]">
+                    <div className="h-full rounded-full bg-gradient-to-r from-[#8839ef] via-[#ea76cb] to-[#04a5e5] stripes-fun transition-all duration-500" style={{ width: `${totalAllProgress}%` }} />
+                  </div>
+                  <p className="mt-1.5 text-[11px] font-bold text-[#6c6f85]">{totalAllAnswered}/{totalAllQuestions} soal selesai — mantap!</p>
                 </div>
-                <h1 className="font-[family-name:var(--font-display)] text-lg tracking-[0.06em] text-[#f0e9df] sm:text-xl">
-                  {title} • {bank.subjectLine}
-                </h1>
+                <Button type="button" onClick={() => handleSelectChapter("all")}
+                  className="shrink-0 px-5 py-2.5 text-[13px]">
+                  Resume seru!
+                </Button>
               </div>
-            </div>
-
-            {/* Metrics Ticker */}
-            <div className="flex flex-wrap items-center gap-3 font-mono text-[0.62rem]">
-              <div className="border border-white/10 bg-white/[0.02] px-3 py-1.5 text-center">
-                <span className="text-[0.5rem] tracking-widest text-[#8a867f]">TOTAL SOAL</span>
-                <p className="font-bold text-[#f0e9df]">{totalAllQuestions}</p>
-              </div>
-              <div className="border border-white/10 bg-white/[0.02] px-3 py-1.5 text-center">
-                <span className="text-[0.5rem] tracking-widest text-[#8a867f]">PROGRESS</span>
-                <p className="font-bold text-[#f2a89e]">
-                  {totalAllAnswered} / {totalAllQuestions} ({totalAllProgress}%)
-                </p>
-              </div>
-              <div className="border border-white/10 bg-white/[0.02] px-3 py-1.5 text-center">
-                <span className="text-[0.5rem] tracking-widest text-[#8a867f]">AKURASI GLOBAL</span>
-                <p className="font-bold text-emerald-400">
-                  {totalAllAnswered > 0
-                    ? `${Math.round((totalAllCorrect / totalAllAnswered) * 100)}%`
-                    : "—"}
-                </p>
-              </div>
-
-              {totalAllAnswered > 0 && (
-                <button
-                  type="button"
-                  onClick={resetAllProgress}
-                  className="flex items-center gap-1.5 border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 font-mono text-[0.6rem] font-bold text-red-300 transition-colors hover:bg-red-500/20"
-                  title="Reset seluruh progres"
-                >
-                  <RotateCcw className="size-3" /> RESET
-                </button>
-              )}
             </div>
           </div>
-        </header>
 
-        {/* Main Content Area */}
-        <main className="relative mx-auto max-w-5xl px-4 py-7 sm:px-6 lg:px-8">
-          {/* Subtitle & Search Bar */}
-          <div className="mb-8 border-b border-white/10 pb-6">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="font-mono text-[0.58rem] font-bold tracking-[0.25em] text-[#9d9992]">
-                  {bank.moduleEyebrow}
-                </p>
-                <h2 className="mt-1 font-[family-name:var(--font-display)] text-2xl tracking-tight text-[#f0e9df] sm:text-3xl">
-                  Pilih Chapter Materi Ujian
-                </h2>
-                <p className="mt-1.5 max-w-3xl text-xs leading-5 text-[#aaa69f]">
-                  {bank.hubDescription}
-                </p>
-              </div>
+          {/* Tabs — single active tab */}
+          <div className="mt-4 flex items-center gap-3 overflow-x-auto whitespace-nowrap pb-1 text-[13px] font-bold">
+            <span className="-rotate-1 rounded-full border-2 border-[#4c4f69] bg-[#8839ef] px-3.5 py-1.5 text-white shadow-[3px_3px_0_#4c4f69]">Course</span>
+            {totalAllAnswered > 0 && (
+              <Button type="button" variant="outline" size="sm" onClick={resetAllProgress} className="ml-auto mb-1 flex shrink-0 items-center gap-1 text-[11px]">
+                <LuRotateCcw className="size-3" /> Reset progres
+              </Button>
+            )}
+          </div>
 
-              {/* Search input */}
-              <div className="relative w-full sm:w-72">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#7d7973]" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={bank.searchPlaceholder}
-                  className="w-full border border-white/15 bg-white/[0.03] py-2 pl-9 pr-8 font-mono text-xs text-[#f0e9df] placeholder:text-[#6e6a64] focus:border-[#f2a89e] focus:outline-none"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#7d7973] hover:text-[#f0e9df]"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="mt-5 flex flex-wrap items-center gap-1.5">
-              <span className="mr-2 flex items-center gap-1 font-mono text-[0.58rem] font-semibold text-[#7d7973]">
-                <Filter className="size-3" /> FILTER:
+          {/* Study modes */}
+          <h2 className="mt-6 text-lg font-bold tracking-tight">Mode belajar — pilih gayamu!</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => handleSelectSpecialMode("competitive")}
+              className="group flex items-center gap-3 rounded-2xl border-2 border-[#4c4f69] bg-white p-4 text-left shadow-[4px_4px_0_#4c4f69] transition-all hover:-translate-y-1 active:scale-[0.99]"
+            >
+              <span className="flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-xl border-2 border-[#4c4f69] bg-[#e64553] text-white shadow-[2px_2px_0_#4c4f69]"><LuSwords className="size-6" /></span>
+              <span className="min-w-0">
+                <span className="block font-bold text-[#4c4f69] group-hover:text-[#8839ef]">Kompetitif!</span>
+                <span className="mt-0.5 block text-xs text-[#6c6f85]">2 menit/soal • {totalAllQuestions} soal ngebut!</span>
               </span>
-              {bank.partFilters.map((f) => (
-                <button
-                  key={f.value}
-                  type="button"
-                  onClick={() => setPartFilter(f.value)}
-                  className={`border px-3 py-1.5 font-mono text-[0.62rem] font-semibold tracking-wider transition-all ${
-                    partFilter === f.value
-                      ? "border-[#f2a89e] bg-[#f2a89e] text-[#111111] font-bold shadow-md shadow-[#f2a89e]/20"
-                      : "border-white/10 bg-white/[0.02] text-[#9d9992] hover:border-white/30 hover:text-[#e8e0d1]"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectSpecialMode("flashcards")}
+              className="group flex items-center gap-3 rounded-2xl border-2 border-[#4c4f69] bg-white p-4 text-left shadow-[4px_4px_0_#4c4f69] transition-all hover:-translate-y-1 active:scale-[0.99]"
+            >
+              <span className="flex size-12 shrink-0 rotate-3 items-center justify-center rounded-xl border-2 border-[#4c4f69] bg-[#1e66f5] text-white shadow-[2px_2px_0_#4c4f69]"><LuLayers className="size-6" /></span>
+              <span className="min-w-0">
+                <span className="block font-bold text-[#4c4f69] group-hover:text-[#8839ef]">Flip Card!</span>
+                <span className="mt-0.5 block text-xs text-[#6c6f85]">Kartu hafalan bolak-balik!</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectSpecialMode("drill")}
+              className="group flex items-center gap-3 rounded-2xl border-2 border-[#4c4f69] bg-white p-4 text-left shadow-[4px_4px_0_#4c4f69] transition-all hover:-translate-y-1 active:scale-[0.99]"
+            >
+              <span className="flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-xl border-2 border-[#4c4f69] bg-[#40a02b] text-white shadow-[2px_2px_0_#4c4f69]"><LuBandage className="size-6" /></span>
+              <span className="min-w-0">
+                <span className="block font-bold text-[#4c4f69] group-hover:text-[#8839ef]">
+                  Drill Salah! {drillQuestions.length > 0 && <span className="ml-1 rounded-full bg-[#e64553] px-1.5 py-px text-[10px] font-bold text-white">{drillQuestions.length}</span>}
+                </span>
+                <span className="mt-0.5 block text-xs text-[#6c6f85]">Bedah soal yang pernah salah!</span>
+              </span>
+            </button>
           </div>
 
-          {/* Master Full Tryout Banner Card */}
-          <div className="ryoku-border mb-8 overflow-hidden bg-white/[0.02] p-6  sm:p-7">
-            <div className="flex flex-wrap items-center justify-between gap-6">
-              <div className="max-w-3xl">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="flex items-center gap-1 border border-[#f2a89e]/80 bg-[#f2a89e]/20 px-2.5 py-0.5 font-mono text-[0.62rem] font-bold tracking-[0.2em] text-[#f8cdc7]">
-                    <Flame className="size-3 text-[#f2a89e]" /> {bank.simulationBadge}
-                  </span>
-                  <span className="font-mono text-[0.6rem] text-[#9d9992] tracking-wider">
-                    {chapters.length} CHAPTERS • {questions.length} QUESTIONS COMBINED
-                  </span>
-                </div>
-                <h3 className="mt-2.5 font-[family-name:var(--font-display)] text-xl font-medium tracking-tight text-[#f0e9df] sm:text-2xl">
-                  {bank.simulationTitle}
-                </h3>
-                <p className="mt-1.5 text-xs leading-5 text-[#aaa69f]">
-                  {bank.simulationDescription}
-                </p>
-                <div className="mt-4 flex flex-wrap items-center gap-4 font-mono text-xs text-[#cfc8bd]">
-                  <span className="flex items-center gap-1.5">
-                    <span className="size-1.5 bg-[#f2a89e]" /> {questions.length} Soal Total
-                  </span>
-                  {bank.recommendedTime && (
-                    <span className="flex items-center gap-1.5">
-                      <span className="size-1.5 bg-cyan-400" /> Waktu Rekomendasi: {bank.recommendedTime}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1.5">
-                    <span className="size-1.5 bg-emerald-400" /> Terjawab: {totalAllAnswered}/{questions.length} ({totalAllProgress}%)
-                  </span>
-                </div>
-              </div>
+          {/* Course Information */}
+          <Card className="mt-5 rounded-2xl bg-white shadow-sm">
+            <CardContent className="p-5">
+              <h2 className="text-xl font-bold tracking-tight">Course Information — intip yuk!</h2>
+              <p className={`mt-2 max-w-5xl text-[13px] leading-6 text-[#6c6f85] ${infoExpanded ? "" : "line-clamp-3"}`}>{courseDesc} {bank.simulationDescription}</p>
+              <Button type="button" variant="link" size="sm" onClick={() => setInfoExpanded((v) => !v)} className="mt-1 px-0 text-[13px]">{infoExpanded ? "Show Less" : "Show More"}</Button>
+            </CardContent>
+          </Card>
 
-              <button
-                type="button"
-                onClick={() => handleSelectChapter("all")}
-                className="group flex items-center gap-2 border border-[#f2a89e] bg-[#f2a89e] px-6 py-3.5 font-mono text-xs font-bold tracking-[0.18em] text-[#171311] transition-all hover:bg-[#f8c2ba] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f0e9df]"
-              >
-                <Sparkles className="size-4 transition-transform group-hover:scale-110" />
-                MULAI SIMULASI PENUH ({questions.length} SOAL)
-              </button>
+          {/* LuFilter + search */}
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Select value={partFilter} onValueChange={(v) => { if (v) setPartFilter(v) }}>
+              <SelectTrigger aria-label="Filter modul" className="w-64 bg-white text-xs text-[#6c6f85]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {bank.partFilters.map((f) => (<SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>))}
+              </SelectContent>
+            </Select>
+            <div className="relative">
+              <LuSearch className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[#9ca0b0]" />
+              <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={bank.searchPlaceholder}
+                className="w-44 bg-white py-2 pl-8 pr-3 text-xs placeholder:text-[#9ca0b0]" />
             </div>
+            <span className="ml-auto rotate-1 rounded-full border-2 border-[#4c4f69] bg-[#df8e1d] px-3 py-1 text-xs font-bold text-white shadow-[2px_2px_0_#4c4f69]">{totalAllAnswered}/{totalAllQuestions} soal terjawab!</span>
           </div>
 
-          {/* Chapter Cards Grid */}
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Chapter / module list like classroom resources */}
+          <div className="mt-4 space-y-4 pb-10">
+            {filteredChapters.length === 0 && (
+              <Card className="animate-pop-in mx-auto max-w-md rounded-2xl bg-white p-8 text-center">
+                <CardContent className="flex flex-col items-center gap-2 p-0">
+                  <span className="animate-wiggle flex size-14 items-center justify-center rounded-2xl border-2 border-[#4c4f69] bg-[#7287fd] text-white shadow-[3px_3px_0_#4c4f69]"><LuBookOpen className="size-7" /></span>
+                  <p className="mt-2 text-sm font-bold text-[#4c4f69]">Hmm, modulnya ngumpet!</p>
+                  <p className="text-xs font-medium text-[#6c6f85]">Coba ubah filter atau kata kunci pencarian yuk.</p>
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setPartFilter("ALL"); setSearchQuery("") }} className="mt-3">
+                    Kembali ke semua modul
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
             {filteredChapters.map((chapter) => {
               const chapterQuestions = questions.filter((q) => q.chapterId === chapter.id)
               const count = chapterQuestions.length
               const answered = chapterQuestions.filter((q) => (answers[q.id]?.length ?? 0) > 0).length
               const chProgress = count ? Math.round((answered / count) * 100) : 0
               const isSubmitted = !!submittedChapters[chapter.id]
-
-              const chCorrect = chapterQuestions.reduce((tot, q) => {
-                const sel = answers[q.id] ?? []
-                const corr = q.answers ?? q.answerIndexes ?? []
-                return hasSameOptions(sel, corr) ? tot + 1 : tot
-              }, 0)
-              const chScore = count ? Math.round((chCorrect / count) * 100) : 0
-              const diff = getChapterDifficulty(chapter.id)
-
               return (
-                <div
-                  key={chapter.id}
-                  className="ryoku-border group flex flex-col justify-between bg-[#0d0d0d]/95 p-5 transition-all hover:border-[#f2a89e]/50 hover:bg-[#111111] sm:p-6"
-                >
-                  <div>
-                    {/* Chapter Header: Icon + Part + Difficulty */}
-                    <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex size-8 items-center justify-center border border-white/15 bg-white/[0.03]">
-                          {getChapterIcon(chapter.id)}
-                        </div>
-                        <div>
-                          <p className="font-mono text-[0.55rem] font-bold tracking-[0.22em] text-[#f2a89e]">
-                            {chapter.part}
-                          </p>
-                          <p className="font-mono text-[0.62rem] font-bold text-[#f0e9df]">
-                            CHAPTER {String(chapter.number).padStart(2, "0")}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-1">
-                        <span className={`border px-1.5 py-0.5 font-mono text-[0.52rem] font-bold tracking-wider ${diff.color}`}>
-                          {diff.label}
-                        </span>
-                        <span className="font-mono text-[0.58rem] text-[#9d9992]">
-                          {count} SOAL
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Chapter Title */}
-                    <h3 className="mt-3.5 font-[family-name:var(--font-display)] text-lg font-medium leading-snug tracking-wide text-[#f0e9df] group-hover:text-[#f8c2ba] transition-colors">
-                      {chapter.title}
-                    </h3>
-
-                    {/* Chapter Description */}
-                    <p className="mt-2 text-xs leading-5 text-[#9d9992]">
-                      {chapter.description}
-                    </p>
-
-                    {/* Subtopics Pills */}
-                    <div className="mt-4 border-t border-white/5 pt-3">
-                      <p className="font-mono text-[0.52rem] font-semibold tracking-[0.2em] text-[#7d7973]">
-                        SUB-MATERI / SECTIONS:
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {chapter.topics.map((topic) => (
-                          <span
-                            key={topic}
-                            className="border border-white/10 bg-white/[0.02] px-1.5 py-0.5 font-mono text-[0.55rem] text-[#b8b2a8]"
-                          >
-                            {topic}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bottom Progress & Start Button */}
-                  <div className="mt-6 border-t border-white/10 pt-4">
-                    <div className="flex items-center justify-between font-mono text-[0.62rem]">
-                      <span className="text-[#8e8a84]">STATUS PROGRES</span>
-                      <span className="font-bold text-[#f0e9df]">
-                        {answered} / {count} ({chProgress}%)
-                      </span>
-                    </div>
-
-                    {/* Segmented Progress Bar */}
-                    <div className="mt-2 h-1.5 overflow-hidden bg-white/10">
-                      <div
-                        className={`h-full transition-all duration-300 ${
-                          isSubmitted ? "bg-emerald-400" : "bg-[#f2a89e]"
-                        }`}
-                        style={{ width: `${chProgress}%` }}
-                      />
-                    </div>
-
-                    {isSubmitted && (
-                      <div className="mt-2.5 flex items-center justify-between font-mono text-[0.62rem] font-bold text-emerald-400">
-                        <span className="flex items-center gap-1">
-                          <CircleCheck className="size-3" /> SELESAI
-                        </span>
-                        <span>SKOR: {chScore}%</span>
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => handleSelectChapter(chapter.id)}
-                      className={`mt-4 flex w-full items-center justify-center gap-2 border px-4 py-2.5 font-mono text-xs font-bold tracking-[0.16em] transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f0e9df] ${
-                        isSubmitted
-                          ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
-                          : answered > 0
-                            ? "border-[#f2a89e] bg-[#f2a89e] text-[#171311] hover:bg-[#f8c2ba]"
-                            : "border-white/20 bg-white/[0.04] text-[#e8e0d1] hover:border-[#f2a89e] hover:bg-[#f2a89e]/10 hover:text-[#f2a89e]"
-                      }`}
-                    >
-                      {isSubmitted ? (
-                        <>
-                          <Eye className="size-3.5" /> LIHAT HASIL / REVIEW ({count} SOAL)
-                        </>
-                      ) : answered > 0 ? (
-                        <>
-                          <ArrowRight className="size-3.5" /> LANJUTKAN ({answered}/{count})
-                        </>
-                      ) : (
-                        <>
-                          <BookOpen className="size-3.5" /> KERJAKAN BAB ({count} SOAL)
-                        </>
+                <Card key={chapter.id}
+                  onClick={() => handleSelectChapter(chapter.id)}
+                  className="group flex w-full cursor-pointer flex-row items-start gap-4 rounded-2xl bg-white p-5 text-left transition-all duration-150 hover:-translate-y-1 hover:shadow-[6px_6px_0_#4c4f69] active:scale-[0.99]">
+                  <span className="flex size-11 shrink-0 -rotate-2 items-center justify-center rounded-xl border-2 border-[#4c4f69] bg-[#ea76cb] text-white shadow-[3px_3px_0_#4c4f69] transition-transform group-hover:rotate-2"><LuFileText className="size-5" /></span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-[15px] font-bold tracking-tight text-[#4c4f69]">[Kuis] Modul {chapter.number}: {chapter.title}</h3>
+                      {isSubmitted && (
+                        <Badge className="flex shrink-0 rotate-2 items-center gap-1 bg-[#40a02b] px-2 py-0.5 text-[11px] text-white">Done!</Badge>
                       )}
-                    </button>
+                    </div>
+                    <p className="mt-2 text-[12px] text-[#6c6f85]">{chapter.part} • {count} soal • {answered}/{count} terjawab ({chProgress}%)</p>
+                    <p className="mt-1 line-clamp-1 text-xs text-[#9ca0b0]">{chapter.topics.join(" • ")}</p>
+                    <Progress value={chProgress} className="mt-3 w-full" />
                   </div>
-                </div>
+                  <LuChevronRight className="size-6 shrink-0 self-center rounded-full border-2 border-[#4c4f69] bg-[#dce0e8] p-0.5 text-[#4c4f69] transition-all group-hover:translate-x-1 group-hover:bg-[#8839ef] group-hover:text-white" />
+                </Card>
               )
             })}
           </div>
@@ -807,26 +857,29 @@ export function TryoutEtsQuiz({
   // Handle empty question bank error
   if (totalQuestions === 0) {
     return (
-      <section className="relative grid min-h-[32rem] place-items-center overflow-hidden border border-white/10 bg-[#080808] p-6 text-[#e8e0d1]">
-        <div className="ryoku-border relative max-w-md bg-[#0f0f0f]/95 p-8 text-center">
-          <CircleDashed className="mx-auto mb-4 size-8 text-[#f2a89e]" aria-hidden="true" />
-          <p className="font-mono text-[0.64rem] font-semibold tracking-[0.28em] text-[#9d9992]">
-            NO DATA PACKET
-          </p>
-          <h2 className="mt-3 font-[family-name:var(--font-display)] text-2xl tracking-tight">
-            Question Bank Kosong
-          </h2>
-          <p className="mt-3 text-xs leading-5 text-[#aaa69f]">
-            Soal untuk bab ini belum dimuat. Silakan kembali ke pemilihan bab.
-          </p>
-          <button
-            type="button"
-            onClick={handleBackToHub}
-            className="mt-5 inline-flex items-center gap-2 border border-white/20 px-4 py-2 font-mono text-xs font-bold tracking-[0.16em] text-[#e8e0d1] hover:border-white/40"
-          >
-            <ArrowLeft className="size-4" /> KEMBALI KE HUB CHAPTER
-          </button>
-        </div>
+      <section className="grid min-h-[32rem] place-items-center bg-[#eff1f5] p-6 text-[#4c4f69]">
+        <Card className="mx-auto w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
+          <CardContent className="flex flex-col items-center p-0">
+            <span className="animate-floaty mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border-2 border-[#4c4f69] bg-[#ea76cb] text-white shadow-[3px_3px_0_#4c4f69]"><LuCircleDashed className="size-7" aria-hidden="true" /></span>
+            <p className="text-sm font-semibold text-[#6c6f85]">
+              Belum ada soal
+            </p>
+            <h2 className="mt-3 text-2xl font-bold text-[#4c4f69]">
+              Ups, soalnya belum nongol!
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-[#6c6f85]">
+              Soal untuk modul ini masih dimasak di dapur. Balik ke daftar modul yuk!
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleBackToHub}
+              className="mt-5 inline-flex items-center gap-2 text-xs font-bold text-[#4c4f69]"
+            >
+              <LuArrowLeft className="size-4" /> Kembali ke daftar modul
+            </Button>
+          </CardContent>
+        </Card>
       </section>
     )
   }
@@ -835,30 +888,28 @@ export function TryoutEtsQuiz({
   const isCurrentFlagged = flagged.includes(currentQuestion.id)
   const currentCorrectAnswers = currentQuestion.answers ?? currentQuestion.answerIndexes ?? []
   const isCurrentCorrect = hasSameOptions(currentAnswers, currentCorrectAnswers)
+  // Explanation beside the question (not below) so the nav buttons never shift
+  const showSideExplanation = isReviewMode && !!currentQuestion.explanation
 
   const activeTitle = currentChapter
-    ? `CHAPTER ${currentChapter.number}: ${currentChapter.title.toUpperCase()}`
-    : `SIMULASI PENUH ${bank.bankTag} // SEMUA CHAPTER (${questions.length} SOAL)`
+    ? `Modul ${currentChapter.number}: ${currentChapter.title}`
+    : `Simulasi penuh ${bank.bankTag} // SEMUA Modul (${questions.length} SOAL)`
 
-  // VIEW 2: RESULTS DOSSIER FOR CHAPTER
+  // VIEW 2: RESULTS FOR CHAPTER
   if (isCurrentSubmitted && !isReviewMode) {
     return (
-      <section className="relative min-h-svh overflow-hidden bg-[#080808] text-[#e8e0d1]">
+      <section className="min-h-svh bg-[#eff1f5] text-[#4c4f69]">
         {/* Top bar */}
-        <header className="relative border-b border-white/10 bg-[#0d0d0d]/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+        <header className="border-b-2 border-[#4c4f69] bg-white px-4 py-3 sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
-            <button
-              type="button"
-              onClick={handleBackToHub}
-              className="flex items-center gap-2 border border-white/20 px-3 py-1.5 font-mono text-[0.62rem] font-bold tracking-[0.16em] text-[#e8e0d1] transition-colors hover:border-[#f2a89e] hover:text-[#f2a89e]"
-            >
-              <ArrowLeft className="size-3.5" /> GANTI CHAPTER
-            </button>
-            <span className="font-mono text-xs text-[#9d9992]">{activeTitle}</span>
+            <Button type="button" variant="outline" size="sm" onClick={handleBackToHub}>
+              <LuArrowLeft className="size-4" /> Ganti modul
+            </Button>
+            <span className="truncate text-sm text-[#6c6f85]">{activeTitle}</span>
           </div>
         </header>
 
-        <ResultsDossier
+        <QuizResult
           answeredCount={answeredCount}
           answers={answers}
           chapterTitle={activeTitle}
@@ -886,149 +937,121 @@ export function TryoutEtsQuiz({
   return (
     <section
       aria-label={`${activeTitle} practice quiz`}
-      className="relative min-h-svh overflow-hidden bg-[#080808] text-[#e8e0d1]"
+      className="min-h-svh bg-[#eff1f5] text-[#4c4f69]"
     >
-      {/* Top Header HUD with Chapter Switcher Dropdown */}
-      <header className="relative border-b border-white/10 bg-[#0d0d0d]/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+      {/* Slim top bar: true breadcrumb + timer + finish */}
+      <header className="border-b-2 border-[#4c4f69] bg-white px-4 py-2.5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2">
+          <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-sm font-bold text-[#6c6f85]">
+            <button
+              type="button"
+              onClick={onBackToCourses ?? onExitToHub ?? handleBackToHub}
+              className="shrink-0 font-medium text-[#8839ef] hover:underline"
+            >
+              My courses
+            </button>
+            <span aria-hidden="true" className="shrink-0 text-[#bcc0cc]">/</span>
             <button
               type="button"
               onClick={handleBackToHub}
-              className="flex items-center gap-1.5 border border-white/20 bg-white/[0.03] px-3 py-1.5 font-mono text-[0.62rem] font-bold tracking-[0.16em] text-[#e8e0d1] transition-colors hover:border-[#f2a89e] hover:bg-[#f2a89e]/10 hover:text-[#f2a89e]"
+              className="max-w-48 truncate font-medium text-[#8839ef] hover:underline"
+              title={bank.subjectLine}
             >
-              <ArrowLeft className="size-3.5" /> PILIH BAB
+              {bank.subjectLine}
             </button>
+            <span aria-hidden="true" className="shrink-0 text-[#bcc0cc]">/</span>
+            <span className="truncate font-semibold text-[#4c4f69]">
+              {currentChapter ? `Modul ${currentChapter.number}` : "Simulasi penuh"}
+            </span>
+          </nav>
 
-            {/* Quick chapter selection select box */}
-            <select
-              value={selectedChapterId ?? ""}
-              onChange={(e) => handleSelectChapter(e.target.value)}
-              className="hidden sm:block border border-white/15 bg-[#121212] px-2.5 py-1.5 font-mono text-[0.65rem] text-[#e8e0d1] focus:border-[#f2a89e] focus:outline-none"
-            >
-              <option value="all">★ FULL SIMULASI {bank.bankTag} ({questions.length} SOAL)</option>
-              {chapters.map((c) => (
-                <option key={c.id} value={c.id}>
-                  Ch. {c.number}: {c.title} ({c.questionCount} Soal)
-                </option>
-              ))}
-            </select>
-
-            <div className="min-w-0">
-              <p className="font-mono text-[0.52rem] font-bold tracking-[0.25em] text-[#9d9992]">
-                {`${currentChapter?.part ?? "FULL EXAMINATION"} // ${bank.bankTag}-NODE 01`}
-              </p>
-              <h1 className="truncate font-[family-name:var(--font-display)] text-base font-medium tracking-[0.04em] text-[#f0e9df] sm:text-lg">
-                {activeTitle}
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-3 text-right">
+          <div className="flex shrink-0 items-center gap-2.5">
+            <p className="flex items-center gap-1.5 rounded-full border-2 border-[#4c4f69] bg-[#df8e1d] px-3 py-1 text-sm font-bold tabular-nums text-white shadow-[2px_2px_0_#4c4f69]">
+              <LuClock className="size-4" aria-hidden="true" />
+              {formatDuration(elapsedSeconds)}
+            </p>
             {isReviewMode ? (
-              <div className="border border-emerald-500/70 bg-emerald-500/15 px-3 py-1.5 font-mono text-[0.62rem] font-bold tracking-[0.16em] text-emerald-300">
-                MODE REVIEW AKTIF
-              </div>
+              <Badge className="rotate-1 bg-[#04a5e5] px-2.5 py-1 text-xs text-white">Pembahasan</Badge>
             ) : (
-              <div className="hidden sm:block">
-                <p className="font-mono text-[0.52rem] font-semibold tracking-[0.22em] text-[#9d9992]">
-                  SESSION STATUS
-                </p>
-                <p className="mt-0.5 flex items-center justify-end gap-1.5 font-mono text-[0.62rem] font-semibold tracking-[0.18em] text-[#d9d2c8]">
-                  <span className="size-1.5 animate-pulse rounded-full bg-[#f2a89e]" />
-                  EXAM RUNNING
-                </p>
-              </div>
+              <Button type="button" size="sm" onClick={requestSubmit}>
+                Selesaikan!
+              </Button>
             )}
-
-            <div className="border-l border-white/10 pl-3 tabular-nums sm:pl-4">
-              <p className="flex items-center justify-end gap-1.5 font-mono text-[0.52rem] font-semibold tracking-[0.2em] text-[#9d9992]">
-                <Clock className="size-3" aria-hidden="true" /> TIMER
-              </p>
-              <p className="mt-0.5 font-mono text-sm tracking-[0.12em] text-[#f0e9df]">
-                {formatDuration(elapsedSeconds)}
-              </p>
-            </div>
           </div>
         </div>
       </header>
 
       {/* Review Mode Banner */}
       {isReviewMode && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-500/30 bg-emerald-950/40 px-4 py-2.5 font-mono text-xs text-emerald-300 sm:px-8">
-          <div className="flex items-center gap-2">
-            <span className="font-bold">MODE REVIEW:</span>
-            <span>Periksa jawabanmu terhadap kunci resmi sistem.</span>
-          </div>
-
-          {/* Filter review buttons */}
-          <div className="flex flex-wrap items-center gap-1.5 text-[0.6rem]">
-            {[
-              { label: "SEMUA", val: "ALL" },
-              { label: "SALAH SAJA", val: "WRONG" },
-              { label: "BENAR SAJA", val: "CORRECT" },
-              { label: "FLAGGED", val: "FLAGGED" },
-            ].map((f) => (
-              <button
-                key={f.val}
+        <div className="border-b-2 border-[#4c4f69] bg-[#df8e1d] px-4 py-3 text-white sm:px-8 dots-light">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+            <p className="text-sm">
+              <span className="font-bold">Mode pembahasan seru: </span>
+              <span className="font-medium">Intip jawabanmu vs kunci jawaban — no nyontek ya!</span>
+            </p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { label: "Semua", val: "ALL" },
+                { label: "Salah", val: "WRONG" },
+                { label: "Benar", val: "CORRECT" },
+                { label: "Ragu", val: "Ragu" },
+              ].map((f) => (
+                <Button
+                  key={f.val}
+                  type="button"
+                  size="sm"
+                  variant={reviewFilter === f.val ? "default" : "outline"}
+                  onClick={() => setReviewFilter(f.val as typeof reviewFilter)}
+                  className={reviewFilter === f.val ? "" : "bg-white text-[#4c4f69]"}
+                >
+                  {f.label}
+                </Button>
+              ))}
+              <Button
                 type="button"
-                onClick={() => setReviewFilter(f.val as typeof reviewFilter)}
-                className={`border px-2.5 py-1 font-bold ${
-                  reviewFilter === f.val
-                    ? "border-emerald-400 bg-emerald-400 text-black"
-                    : "border-emerald-500/40 bg-emerald-950/50 text-emerald-300 hover:bg-emerald-900/50"
-                }`}
+                size="sm"
+                variant="outline"
+                onClick={() => setIsReviewMode(false)}
+                className="ml-1 bg-white text-[#4c4f69] text-sm"
               >
-                {f.label}
-              </button>
-            ))}
-
-            <button
-              type="button"
-              onClick={() => setIsReviewMode(false)}
-              className="ml-2 border border-emerald-400/80 bg-emerald-900/80 px-3 py-1 font-bold text-white hover:bg-emerald-800"
-            >
-              KEMBALI KE HASIL DOSSIER
-            </button>
+                Kembali ke hasil
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="relative mx-auto grid max-w-5xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(17rem,21rem)_minmax(0,1fr)] lg:gap-6 lg:px-8 lg:py-7">
+      <div className={`mx-auto grid gap-5 px-4 py-5 sm:px-6 lg:gap-6 lg:px-8 lg:py-7 ${showSideExplanation ? "max-w-7xl xl:grid-cols-[minmax(0,1fr)_minmax(0,23rem)_18rem]" : "max-w-6xl lg:grid-cols-[minmax(0,1fr)_20rem]"}`}>
         {/* Sidebar Question Map */}
-        <aside className="order-2 min-w-0 lg:order-1">
-          <div className="ryoku-border bg-[#0d0d0d]/95 p-4 sm:p-5 lg:sticky lg:top-6">
-            <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3.5">
-              <div>
-                <p className="font-mono text-[0.52rem] font-bold tracking-[0.25em] text-[#9d9992]">
-                  ACTIVE EXAM DOSSIER
-                </p>
-                <h2 className="mt-1 font-[family-name:var(--font-display)] text-lg tracking-wide text-[#f0e9df]">
-                  {currentChapter ? `BAB ${currentChapter.number}` : `ALL ${totalQuestions} SOAL`}
-                </h2>
-              </div>
-              <div className="flex size-7 items-center justify-center border border-[#f2a89e]/50 bg-[#f2a89e]/10 text-[#f2a89e]">
-                <ListChecks className="size-4" />
-              </div>
+        <aside className={`min-w-0 ${showSideExplanation ? "order-3 xl:order-3" : "order-2 lg:order-2"}`}>
+          <Card className="bg-white p-4 shadow-sm sm:p-5 lg:sticky lg:top-20">
+            <div className="flex items-center justify-between gap-3 border-b border-[#bcc0cc] pb-3">
+              <h2 className="text-lg font-bold tracking-tight text-[#4c4f69]">Navigasi kuis</h2>
+              <span className="flex size-9 -rotate-3 items-center justify-center rounded-xl border-2 border-[#4c4f69] bg-[#8839ef] text-white shadow-[2px_2px_0_#4c4f69]">
+                <LuListChecks className="size-4" />
+              </span>
             </div>
+            <p className="mt-2 text-sm text-[#6c6f85]">
+              {currentChapter ? `Modul ${currentChapter.number} • ${currentChapter.title}` : `Simulasi penuh • ${totalQuestions} soal`}
+            </p>
 
             {/* Quick Metrics */}
-            <dl className="mt-3.5 grid grid-cols-3 divide-x divide-white/10 border-y border-white/10">
-              <div className="py-2.5 pr-2">
-                <dt className="font-mono text-[0.5rem] font-semibold tracking-[0.16em] text-[#8e8a84]">TERJAWAB</dt>
-                <dd className="mt-1 font-mono text-base font-bold text-[#f0e9df]">
+            <dl className="mt-3 grid grid-cols-3 gap-2">
+              <div className="rounded-xl border-2 border-[#4c4f69] bg-[#40a02b]/15 p-2.5 text-center shadow-[2px_2px_0_#4c4f69]">
+                <dt className="text-xs font-bold text-[#40a02b]">Terjawab</dt>
+                <dd className="mt-1 text-lg font-bold text-[#4c4f69]">
                   {String(answeredCount).padStart(2, "0")}
                 </dd>
               </div>
-              <div className="px-2 py-2.5">
-                <dt className="font-mono text-[0.5rem] font-semibold tracking-[0.16em] text-[#8e8a84]">TERBUKA</dt>
-                <dd className="mt-1 font-mono text-base font-bold text-[#f0e9df]">
+              <div className="rounded-xl border-2 border-[#4c4f69] bg-white p-2.5 text-center shadow-[2px_2px_0_#4c4f69]">
+                <dt className="text-xs font-bold text-[#6c6f85]">Belum</dt>
+                <dd className="mt-1 text-lg font-bold text-[#4c4f69]">
                   {String(unansweredCount).padStart(2, "0")}
                 </dd>
               </div>
-              <div className="py-2.5 pl-2">
-                <dt className="font-mono text-[0.5rem] font-semibold tracking-[0.16em] text-[#8e8a84]">FLAGGED</dt>
-                <dd className="mt-1 font-mono text-base font-bold text-[#f2a89e]">
+              <div className="rounded-xl border-2 border-[#4c4f69] bg-[#df8e1d]/15 p-2.5 text-center shadow-[2px_2px_0_#4c4f69]">
+                <dt className="text-xs font-bold text-[#df8e1d]">Ragu</dt>
+                <dd className="mt-1 text-lg font-bold text-[#df8e1d]">
                   {String(flagged.filter((id) => activeQuestions.some((q) => q.id === id)).length).padStart(2, "0")}
                 </dd>
               </div>
@@ -1037,63 +1060,52 @@ export function TryoutEtsQuiz({
             {/* Question Filter Tabs in Sidebar */}
             <div className="mt-4">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="font-mono text-[0.58rem] font-bold tracking-[0.2em] text-[#c6c0b8]">
-                  QUESTION MAP
+                <h3 className="text-sm font-bold text-[#4c4f69]">
+                  Daftar soal
                 </h3>
-                <span className="font-mono text-[0.58rem] text-[#f2a89e]">{progress}% SELESAI</span>
+                <span className="-rotate-2 rounded-full border-2 border-[#4c4f69] bg-[#8839ef] px-2 py-0.5 text-xs font-bold text-white shadow-[2px_2px_0_#4c4f69]">{progress}% selesai!</span>
               </div>
 
               {/* Progress Bar */}
-              <div
-                className="mt-2 h-1 overflow-hidden bg-white/10"
-                role="progressbar"
-                aria-label="Quiz progress"
-                aria-valuemax={100}
-                aria-valuemin={0}
-                aria-valuenow={progress}
-              >
-                <div className="h-full bg-[#f2a89e] transition-all duration-300" style={{ width: `${progress}%` }} />
-              </div>
+              <Progress value={progress} aria-label="Quiz progress" className="mt-3" />
 
               {/* Filter pills */}
-              <div className="mt-3 flex gap-1 font-mono text-[0.55rem]">
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {[
-                  { label: "SEMUA", v: "ALL" },
-                  { label: "TERJAWAB", v: "ANSWERED" },
-                  { label: "BELUM", v: "UNANSWERED" },
-                  { label: "FLAG", v: "FLAGGED" },
+                  { label: "Semua", v: "ALL" },
+                  { label: "Terjawab", v: "ANSWERED" },
+                  { label: "Belum", v: "UNANSWERED" },
+                  { label: "Ragu", v: "Ragu" },
                 ].map((item) => (
-                  <button
+                  <Button
                     key={item.v}
                     type="button"
+                    size="sm"
+                    variant={sidebarFilter === item.v ? "default" : "outline"}
                     onClick={() => setSidebarFilter(item.v as typeof sidebarFilter)}
-                    className={`flex-1 border py-1 text-center font-bold transition-colors ${
-                      sidebarFilter === item.v
-                        ? "border-[#f2a89e] bg-[#f2a89e]/15 text-[#f5c4bd]"
-                        : "border-white/10 bg-white/[0.02] text-[#8e8a84] hover:text-[#e8e0d1]"
-                    }`}
+                    className={sidebarFilter === item.v ? "text-xs" : "text-xs bg-white text-[#4c4f69]"}
                   >
                     {item.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
 
               {/* Numbered Question Map */}
-              <div className="mt-3.5 max-h-72 overflow-y-auto pr-1">
+              <div className="mt-3 max-h-72 overflow-y-auto pr-1">
                 <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-6 lg:grid-cols-5">
                   {displaySidebarQuestions.map(({ question, index }) => {
                     const isAnswered = (answers[question.id]?.length ?? 0) > 0
                     const isFlag = flagged.includes(question.id)
                     const isCurrent = index === activeIndex
 
-                    let reviewColor = ""
+                    let reviewClass = ""
                     if (isReviewMode) {
                       const qAns = answers[question.id] ?? []
                       const qCorr = question.answers ?? question.answerIndexes ?? []
                       const isRight = hasSameOptions(qAns, qCorr)
-                      reviewColor = isRight
-                        ? "border-emerald-500/80 bg-emerald-500/20 text-emerald-300"
-                        : "border-red-500/80 bg-red-500/20 text-red-300"
+                      reviewClass = isRight
+                        ? "border-2 border-[#4c4f69] bg-[#40a02b] text-white shadow-[2px_2px_0_#4c4f69]"
+                        : "border-2 border-[#4c4f69] bg-[#e64553] text-white shadow-[2px_2px_0_#4c4f69]"
                     }
 
                     return (
@@ -1102,22 +1114,22 @@ export function TryoutEtsQuiz({
                         type="button"
                         onClick={() => goToQuestion(index)}
                         aria-current={isCurrent ? "step" : undefined}
-                        className={`relative flex h-8 items-center justify-center border font-mono text-[0.62rem] font-bold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f0e9df] ${
+                        aria-label={`Soal ${index + 1}${isAnswered ? ", terjawab" : ""}${isFlag ? ", ragu" : ""}`}
+                        className={`relative flex size-10 items-center justify-center rounded-xl border-2 text-sm font-bold transition-all duration-150 hover:-translate-y-0.5 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ea76cb] ${
                           isCurrent
-                            ? "border-[#f0e9df] bg-[#e8e0d1] text-[#111111] shadow-sm"
+                            ? "rotate-3 border-[#4c4f69] bg-[#8839ef] text-white shadow-[3px_3px_0_#4c4f69]"
                             : isReviewMode
-                              ? reviewColor
+                              ? reviewClass
                               : isAnswered
-                                ? "border-[#f2a89e]/70 bg-[#f2a89e]/10 text-[#f5c4bd] hover:bg-[#f2a89e]/20"
-                                : "border-white/10 bg-white/[0.02] text-[#9d9992] hover:border-white/30 hover:text-[#e8e0d1]"
+                                ? "border-[#4c4f69] bg-[#8839ef]/10 text-[#8839ef] shadow-[2px_2px_0_#4c4f69] hover:bg-[#8839ef]/20"
+                                : "border-[#bcc0cc] bg-white text-[#6c6f85] hover:border-[#4c4f69] hover:text-[#4c4f69] hover:shadow-[2px_2px_0_#4c4f69]"
                         }`}
                       >
-                        {String(index + 1).padStart(2, "0")}
+                        {index + 1}
                         {isFlag && (
                           <span
-                            className={`absolute -right-0.5 -top-0.5 size-2 rounded-full ${
-                              isCurrent ? "bg-black" : "bg-[#f2a89e]"
-                            }`}
+                            aria-hidden="true"
+                            className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full border-2 border-[#4c4f69] bg-[#df8e1d] text-[8px] text-white"
                           />
                         )}
                       </button>
@@ -1128,134 +1140,135 @@ export function TryoutEtsQuiz({
             </div>
 
             {/* Keyboard Shortcuts Notice */}
-            <div className="mt-4 border-t border-white/10 pt-3 font-mono text-[0.52rem] text-[#8e8a84]">
-              <p className="font-bold text-[#b5afa5] tracking-wider">PINTASAN KEYBOARD:</p>
-              <p className="mt-1 flex justify-between">
-                <span>[A-E] atau [1-5]</span>
-                <span className="text-[#e8e0d1]">PILIH OPSI</span>
-              </p>
-              <p className="flex justify-between">
-                <span>[← / →] atau [P / N]</span>
-                <span className="text-[#e8e0d1]">SEBELUM / SESUDAH</span>
-              </p>
-              <p className="flex justify-between">
-                <span>[F]</span>
-                <span className="text-[#e8e0d1]">TANDAI RAGU (FLAG)</span>
-              </p>
+            <div className="mt-4 rounded-2xl border-2 border-[#4c4f69] bg-[#e6e9ef] p-3 text-xs text-[#6c6f85] shadow-[2px_2px_0_#4c4f69]">
+              <p className="font-bold text-[#4c4f69]">Tips keyboard ninja!</p>
+              <ul className="mt-1.5 space-y-1">
+                <li className="flex justify-between gap-2">
+                  <span>A–E atau 1–5</span>
+                  <span className="font-medium text-[#4c4f69]">Pilih jawaban</span>
+                </li>
+                <li className="flex justify-between gap-2">
+                  <span>← / → atau P / N</span>
+                  <span className="font-medium text-[#4c4f69]">Sebelumnya / berikutnya</span>
+                </li>
+                <li className="flex justify-between gap-2">
+                  <span>F</span>
+                  <span className="font-medium text-[#4c4f69]">Tandai ragu</span>
+                </li>
+              </ul>
             </div>
 
             {/* Action buttons */}
-            <div className="mt-4 border-t border-white/10 pt-3">
+            <div className="mt-4 border-t-2 border-dashed border-[#bcc0cc] pt-3">
               {isReviewMode ? (
-                <button
+                <Button
                   type="button"
                   onClick={() => setIsReviewMode(false)}
-                  className="flex w-full items-center justify-center gap-2 border border-emerald-500 bg-emerald-600 px-3 py-2.5 font-mono text-[0.62rem] font-bold tracking-[0.16em] text-white transition-colors hover:bg-emerald-500"
+                  className="w-full text-sm"
                 >
-                  KEMBALI KE HASIL
-                </button>
+                  Kembali ke hasil
+                </Button>
               ) : (
-                <button
+                <Button
                   type="button"
                   onClick={requestSubmit}
-                  className="flex w-full items-center justify-center gap-2 border border-[#f2a89e] bg-[#f2a89e] px-3 py-2.5 font-mono text-[0.62rem] font-bold tracking-[0.16em] text-[#171311] transition-colors hover:bg-[#f8c2ba] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f0e9df]"
+                  className="w-full text-sm"
                 >
-                  <Send className="size-3.5" aria-hidden="true" />
-                  SELESAIKAN CHAPTER INI
-                </button>
+                  <LuSend className="size-4" aria-hidden="true" />
+                  Selesaikan modul ini!
+                </Button>
               )}
             </div>
-          </div>
+          </Card>
         </aside>
 
         {/* Question Panel */}
-        <main className="order-1 min-w-0 lg:order-2">
-          <article className="ryoku-border overflow-hidden bg-[#0d0d0d]/95 shadow-2xl shadow-black/30">
-            {/* Question Sub-Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-white/[0.02] px-4 py-3 sm:px-6">
+        <main className="order-1 w-full min-w-0">
+          <Card className="animate-pop-in bg-white">
+            {/* Question header */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-[#4c4f69] bg-[#e6e9ef] px-4 py-3 sm:px-6">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="border border-[#f2a89e]/80 bg-[#f2a89e]/15 px-2.5 py-0.5 font-mono text-[0.62rem] font-bold tracking-[0.18em] text-[#f5c4bd]">
-                  SOAL {String(activeIndex + 1).padStart(2, "0")} / {String(totalQuestions).padStart(2, "0")}
-                </span>
+                <Badge className="-rotate-1 px-3 py-1 text-sm">
+                  Soal {String(activeIndex + 1).padStart(2, "0")}/{String(totalQuestions).padStart(2, "0")}
+                </Badge>
 
                 {currentQuestion.sectionTitle && (
-                  <span className="border border-white/15 bg-white/[0.03] px-2 py-0.5 font-mono text-[0.58rem] tracking-wider text-[#d6cfc5]">
+                  <span className="text-sm text-[#6c6f85]">
                     {currentQuestion.sectionTitle}
                   </span>
                 )}
 
-                <span className="font-mono text-[0.55rem] font-semibold text-[#8e8a84] tracking-wider">
-                  {currentQuestion.multiple ? "[MULTI-SELECT]" : "[SINGLE-CHOICE]"}
+                <span className="text-xs font-medium text-[#6c6f85]">
+                  {currentQuestion.multiple ? "[Pilih banyak]" : "[Pilih satu]"}
                 </span>
               </div>
 
               {/* Flag button & Clear answer button */}
               <div className="flex items-center gap-2">
                 {!isReviewMode && currentAnswers.length > 0 && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => clearAnswer(currentQuestion.id)}
-                    className="border border-white/10 px-2 py-1 font-mono text-[0.55rem] text-[#8e8a84] hover:border-white/30 hover:text-[#e8e0d1]"
+                    className="text-xs text-[#6c6f85] hover:text-[#4c4f69]"
                   >
-                    HAPUS PILIHAN
-                  </button>
+                    Hapus jawaban
+                  </Button>
                 )}
 
                 {!isReviewMode && (
-                  <button
+                  <Button
                     type="button"
+                    variant={isCurrentFlagged ? "default" : "outline"}
+                    size="sm"
                     onClick={() => toggleFlag(currentQuestion.id)}
                     aria-pressed={isCurrentFlagged}
-                    className={`flex items-center gap-1.5 border px-2.5 py-1 font-mono text-[0.58rem] font-bold tracking-wider transition-colors ${
-                      isCurrentFlagged
-                        ? "border-[#f2a89e] bg-[#f2a89e]/15 text-[#f5c4bd]"
-                        : "border-white/10 text-[#aaa69f] hover:border-white/30 hover:text-[#e8e0d1]"
-                    }`}
+                    className={isCurrentFlagged ? "bg-[#df8e1d] text-xs text-white" : "text-xs bg-white text-[#4c4f69]"}
                   >
-                    <span className={`size-1.5 rounded-full ${isCurrentFlagged ? "bg-[#f2a89e]" : "bg-transparent border border-white/30"}`} />
-                    {isCurrentFlagged ? "FLAGGED" : "FLAG"}
-                  </button>
+                    {isCurrentFlagged ? "Ragu" : "Tandai ragu"}
+                  </Button>
                 )}
               </div>
             </div>
 
             {/* Prompt Body */}
-            <div className="px-4 py-6 sm:px-8 sm:py-8 lg:px-10">
+            <div className="px-4 py-6 sm:px-8 sm:py-8">
               <div className="flex items-center justify-between gap-2">
-                <p className="font-mono text-[0.58rem] font-bold tracking-[0.24em] text-[#9d9992]">
-                  {currentQuestion.chapterTitle ? `${currentQuestion.chapterTitle.toUpperCase()} // ` : ""}
-                  QUESTION_ID #{currentQuestion.id}
+                <p className="text-sm text-[#6c6f85]">
+                  {currentQuestion.chapterTitle ? `${currentQuestion.chapterTitle} • ` : ""}
+                  Soal #{currentQuestion.id}
                 </p>
 
                 {isReviewMode && (
-                  <span
-                    className={`font-mono text-xs font-bold px-2.5 py-0.5 border ${
-                      isCurrentCorrect
-                        ? "border-emerald-500/80 bg-emerald-500/20 text-emerald-300"
-                        : "border-red-500/80 bg-red-500/20 text-red-300"
-                    }`}
+                  <Badge
+                    variant="outline"
+                    className={isCurrentCorrect
+                      ? "bg-[#40a02b] text-sm text-white rotate-2"
+                      : "bg-[#e64553] text-sm text-white -rotate-2"
+                    }
                   >
-                    {isCurrentCorrect ? "BENAR (+1)" : "SALAH (0)"}
-                  </span>
+                    {isCurrentCorrect ? "Benar, hebat!" : "Kurang tepat, gapapa!"}
+                  </Badge>
                 )}
               </div>
 
               <h2
                 id={`question-${currentQuestion.id}`}
-                className="mt-4 max-w-4xl font-[family-name:var(--font-display)] text-xl font-normal leading-[1.3] tracking-[-0.01em] text-[#f0e9df] sm:text-2xl lg:text-3xl"
+                className="mt-4 max-w-4xl text-xl font-bold leading-snug tracking-tight text-[#4c4f69] sm:text-2xl"
               >
-                {currentQuestion.text}
+                {decodeUnicodeEscapes(currentQuestion.text)}
               </h2>
 
               <p
                 id={`question-instructions-${currentQuestion.id}`}
-                className="mt-3 font-mono text-[0.68rem] text-[#9d9992]"
+                className="mt-3 text-[13px] text-[#6c6f85]"
               >
                 {isReviewMode
-                  ? "Tinjauan hasil pengerjaan. Opsi dengan centang hijau adalah kunci jawaban yang sah."
+                  ? "Tinjauan seru! Opsi berstiker hijau itu kunci jawabannya."
                   : currentQuestion.multiple
-                    ? "Pilih semua opsi yang benar. Tekan tombol huruf A-D atau klik opsi."
-                    : "Pilih satu opsi paling tepat. Tekan tombol keyboard [A-D] atau klik opsi."}
+                    ? "Pilih semua yang bener ya! Pencet A–D atau klik opsinya. Kamu bisa!"
+                    : "Pilih satu yang paling pas! Pencet A–D atau klik opsinya. Semangat!"}
               </p>
 
               {/* Options */}
@@ -1273,29 +1286,32 @@ export function TryoutEtsQuiz({
                       const inputId = `tryout-${currentQuestion.id}-option-${optionIndex}`
                       const optLabel = optionLabels[optionIndex] ?? String(optionIndex + 1)
 
-                      let optionStyle = "border-white/10 bg-white/[0.015] text-[#c9c3ba] hover:border-white/30 hover:bg-white/[0.035]"
-                      let bracketStyle = "text-[#8e8a84] border-white/15 bg-white/[0.02]"
+                      const stickerPalette = ["bg-[#8839ef]", "bg-[#1e66f5]", "bg-[#ea76cb]", "bg-[#40a02b]", "bg-[#04a5e5]", "bg-[#7287fd]"]
+                      const stickerBg = stickerPalette[optionIndex % stickerPalette.length]
+                      const tilt = optionIndex % 2 === 0 ? "-rotate-3" : "rotate-3"
+                      let optionStyle = "border-2 border-[#4c4f69] bg-white text-[#4c4f69] shadow-[3px_3px_0_#4c4f69] hover:-translate-y-0.5 hover:bg-[#e6e9ef]"
+                      let circleStyle = `border-2 border-[#4c4f69] ${stickerBg} text-white shadow-[2px_2px_0_#4c4f69] ${tilt}`
 
                       if (isReviewMode) {
                         if (isExpectedAnswer) {
-                          optionStyle = "border-emerald-500 bg-emerald-500/15 text-emerald-100 font-medium"
-                          bracketStyle = "border-emerald-400 bg-emerald-500 text-black font-bold"
+                          optionStyle = "border-2 border-[#4c4f69] bg-[#40a02b]/15 font-bold text-[#4c4f69] shadow-[3px_3px_0_#4c4f69]"
+                          circleStyle = "border-2 border-[#4c4f69] bg-[#40a02b] font-bold text-white shadow-[2px_2px_0_#4c4f69]"
                         } else if (isSelected && !isExpectedAnswer) {
-                          optionStyle = "border-red-500 bg-red-500/15 text-red-200 line-through opacity-85"
-                          bracketStyle = "border-red-500 bg-red-500 text-white font-bold"
+                          optionStyle = "border-2 border-[#4c4f69] bg-[#e64553]/10 font-bold text-[#4c4f69] shadow-[3px_3px_0_#4c4f69]"
+                          circleStyle = "border-2 border-[#4c4f69] bg-[#e64553] font-bold text-white shadow-[2px_2px_0_#4c4f69]"
                         } else {
-                          optionStyle = "border-white/5 bg-transparent text-[#6e6b66] opacity-50"
+                          optionStyle = "border-2 border-[#bcc0cc] bg-white text-[#9ca0b0]"
                         }
                       } else if (isSelected) {
-                        optionStyle = "border-[#f2a89e] bg-[#f2a89e]/10 text-[#f6ebe3] "
-                        bracketStyle = "border-[#f2a89e] bg-[#f2a89e] text-black font-bold"
+                        optionStyle = "border-2 border-[#4c4f69] bg-[#8839ef]/10 font-bold text-[#4c4f69] shadow-[3px_3px_0_#4c4f69] -translate-y-0.5"
+                        circleStyle = "border-2 border-[#4c4f69] bg-[#8839ef] font-bold text-white shadow-[2px_2px_0_#4c4f69] scale-110"
                       }
 
                       return (
                         <label
                           key={inputId}
                           htmlFor={inputId}
-                          className={`group flex items-center gap-3 border p-3 transition-all sm:gap-4 sm:p-3.5 ${
+                          className={`group flex w-full items-center gap-3 rounded-2xl p-3.5 text-left transition-all duration-150 active:scale-[0.99] sm:gap-4 sm:p-4 ${
                             isReviewMode ? "cursor-default" : "cursor-pointer"
                           } ${optionStyle}`}
                         >
@@ -1310,36 +1326,36 @@ export function TryoutEtsQuiz({
                             className="sr-only"
                           />
 
-                          {/* Tactical Bracket Label */}
+                          {/* Circle letter badge */}
                           <span
                             aria-hidden="true"
-                            className={`flex size-7 shrink-0 items-center justify-center border font-mono text-xs transition-colors ${bracketStyle}`}
+                            className={`flex size-10 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-150 ${circleStyle}`}
                           >
                             {isReviewMode && isExpectedAnswer ? (
-                              <Check className="size-3.5 stroke-[3]" />
+                              <LuCheck className="size-4 stroke-[3]" />
                             ) : isReviewMode && isSelected && !isExpectedAnswer ? (
-                              <X className="size-3.5 stroke-[3]" />
-                            ) : isSelected ? (
-                              <Check className="size-3.5 stroke-[3]" />
+                              <LuX className="size-4 stroke-[3]" />
+                            ) : isSelected && !isReviewMode ? (
+                              <LuCheck className="size-4 stroke-[3]" />
                             ) : (
                               optLabel
                             )}
                           </span>
 
-                          <span className="min-w-0 flex-1 text-sm leading-6 sm:text-[0.92rem]">
-                            {option}
+                          <span className="min-w-0 flex-1 text-sm leading-6 sm:text-base">
+                            {decodeUnicodeEscapes(option)}
                           </span>
 
                           {/* Review badges */}
                           {isReviewMode && isExpectedAnswer && (
-                            <span className="shrink-0 border border-emerald-500/60 bg-emerald-500/20 px-2 py-0.5 font-mono text-[0.55rem] font-bold text-emerald-300">
-                              KUNCI BENAR
-                            </span>
+                            <Badge className="shrink-0 rotate-2 bg-[#40a02b] text-xs text-white">
+                              Kunci jawaban!
+                            </Badge>
                           )}
                           {isReviewMode && isSelected && !isExpectedAnswer && (
-                            <span className="shrink-0 border border-red-500/60 bg-red-500/20 px-2 py-0.5 font-mono text-[0.55rem] font-bold text-red-300">
-                              PILIHAN ANDA
-                            </span>
+                            <Badge className="shrink-0 -rotate-2 bg-[#e64553] text-xs text-white">
+                              Jawabanmu
+                            </Badge>
                           )}
                         </label>
                       )
@@ -1347,112 +1363,118 @@ export function TryoutEtsQuiz({
                   </div>
                 </fieldset>
               ) : (
-                <div role="alert" className="mt-6 flex items-start gap-3 border border-[#f2a89e]/50 bg-[#f2a89e]/10 p-4 font-mono text-xs text-[#f5c4bd]">
-                  <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <div role="alert" className="mt-6 flex items-start gap-3 rounded-2xl border-2 border-[#4c4f69] bg-[#df8e1d]/15 p-4 text-sm text-[#4c4f69] shadow-[3px_3px_0_#4c4f69]">
+                  <LuCircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                   Tidak ada opsi jawaban tersedia untuk pertanyaan ini.
                 </div>
               )}
 
-              {/* Pembahasan: only banks whose questions carry explanations (EAS) */}
-              {isReviewMode && currentQuestion.explanation && (
-                <RichExplanationCard
-                  questionId={currentQuestion.id}
-                  questionText={currentQuestion.text}
-                  options={currentQuestion.options}
-                  selectedAnswers={currentAnswers}
-                  correctAnswers={currentCorrectAnswers}
-                  explanation={currentQuestion.explanation}
-                  sectionTitle={currentQuestion.sectionTitle}
-                  chapterTitle={currentQuestion.chapterTitle}
-                  isCorrect={isCurrentCorrect}
-                />
-              )}
-
-              {/* Submit warning banner */}
-              {showSubmitNotice && (
-                <div role="alert" className="mt-6 border border-[#f2a89e] bg-[#f2a89e]/10 p-4">
+              {/* Submit warning popup */}
+              <Dialog open={showSubmitNotice} onOpenChange={setShowSubmitNotice}>
+                <DialogContent aria-describedby={undefined} className="border-[#df8e1d] bg-[#fff9ec]">
                   <div className="flex items-start gap-3">
-                    <CircleAlert className="mt-0.5 size-4 shrink-0 text-[#f2a89e]" aria-hidden="true" />
+                    <span className="flex size-10 shrink-0 -rotate-3 items-center justify-center rounded-xl border-2 border-[#4c4f69] bg-[#df8e1d] text-white shadow-[2px_2px_0_#4c4f69]">
+                      <LuCircleAlert className="size-5" aria-hidden="true" />
+                    </span>
                     <div>
-                      <p className="font-mono text-xs font-bold text-[#f6ebe3]">
-                        PERINGATAN: {unansweredCount} PERTANYAAN BELUM TERJAWAB
-                      </p>
-                      <p className="mt-1 text-xs text-[#d0c5bd]">
-                        Apakah kamu ingin memeriksa kembali pertanyaan yang masih kosong, atau langsung mengirimkan sesi ini?
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2 font-mono text-[0.62rem]">
-                        <button
-                          type="button"
-                          onClick={() => setShowSubmitNotice(false)}
-                          className="border border-white/25 px-3 py-1.5 font-bold text-[#e8e0d1] hover:border-white/45"
-                        >
-                          PERIKSA KEMBALI
-                        </button>
-                        <button
-                          type="button"
-                          onClick={finishCurrentSession}
-                          className="border border-[#f2a89e] bg-[#f2a89e] px-3 py-1.5 font-bold text-[#171311] hover:bg-[#f8c2ba]"
-                        >
-                          KIRIM SEKARANG
-                        </button>
-                      </div>
+                      <DialogTitle className="text-base font-bold text-[#4c4f69]">
+                        Oopsie! {unansweredCount} soal belum terjawab
+                      </DialogTitle>
+                      <DialogDescription className="mt-1 text-sm text-[#6c6f85]">
+                        Mau cek lagi yang kosong, atau langsung kumpulkan aja? Kamu hebat kok!
+                      </DialogDescription>
                     </div>
                   </div>
-                </div>
-              )}
+                  <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSubmitNotice(false)}
+                    >
+                      Cek lagi
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={finishCurrentSession}
+                    >
+                      Kumpulkan sekarang!
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
 
             {/* Bottom Nav Footer */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-black/20 px-4 py-3 sm:px-6">
-              <button
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-[#4c4f69] bg-[#e6e9ef] px-4 py-3 sm:px-6">
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => goToQuestion(activeIndex - 1)}
                 disabled={activeIndex === 0}
-                className="flex items-center gap-1.5 border border-white/15 px-3 py-2 font-mono text-[0.62rem] font-bold text-[#c9c3ba] transition-colors hover:border-white/40 hover:text-[#f0e9df] disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f0e9df]"
+                className="text-sm"
               >
-                <ChevronLeft className="size-3.5" aria-hidden="true" /> [P] PREV
-              </button>
+                <LuChevronLeft className="size-4" aria-hidden="true" /> Sebelumnya
+              </Button>
 
-              <div className="font-mono text-[0.6rem] text-[#9d9992]">
-                SOAL {activeIndex + 1} DARI {totalQuestions}
+              <div className="rounded-full border-2 border-[#4c4f69] bg-white px-3 py-1 text-sm font-bold text-[#4c4f69] shadow-[2px_2px_0_#4c4f69]">
+                Soal {activeIndex + 1} dari {totalQuestions}
               </div>
 
               {activeIndex === totalQuestions - 1 ? (
                 isReviewMode ? (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setIsReviewMode(false)}
-                    className="flex items-center gap-1.5 border border-emerald-500/80 bg-emerald-600 px-3.5 py-2 font-mono text-[0.62rem] font-bold text-white"
+                    className="text-sm"
                   >
-                    SELESAI REVIEW
-                  </button>
+                    Selesai lihat pembahasan
+                  </Button>
                 ) : (
-                  <button
+                  <Button
                     type="button"
                     onClick={requestSubmit}
-                    className="flex items-center gap-1.5 border border-[#f2a89e] bg-[#f2a89e] px-4 py-2 font-mono text-[0.62rem] font-bold text-[#171311] transition-colors hover:bg-[#f8c2ba] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f0e9df]"
+                    className="text-sm"
                   >
-                    SUBMIT CHAPTER <Send className="size-3.5" aria-hidden="true" />
-                  </button>
+                    Kumpulkan! <LuSend className="size-4" aria-hidden="true" />
+                  </Button>
                 )
               ) : (
-                <button
+                <Button
                   type="button"
                   onClick={() => goToQuestion(activeIndex + 1)}
-                  className="flex items-center gap-1.5 border border-white/20 px-3.5 py-2 font-mono text-[0.62rem] font-bold text-[#e8e0d1] transition-colors hover:border-white/50 hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f0e9df]"
+                  className="text-sm"
                 >
-                  NEXT [N] <ChevronRight className="size-3.5" aria-hidden="true" />
-                </button>
+                  Berikutnya <LuChevronRight className="size-4" aria-hidden="true" />
+                </Button>
               )}
             </div>
-          </article>
+          </Card>
         </main>
+
+        {/* Pembahasan beside the question — nav buttons stay put */}
+        {showSideExplanation && (
+          <aside key={currentQuestion.id} className="order-2 min-w-0 animate-pop-in xl:sticky xl:top-24 xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto xl:pb-2">
+            <RichExplanationCard
+              questionId={currentQuestion.id}
+              questionText={decodeUnicodeEscapes(currentQuestion.text)}
+              options={currentQuestion.options.map(decodeUnicodeEscapes)}
+              selectedAnswers={currentAnswers}
+              correctAnswers={currentCorrectAnswers}
+              explanation={currentQuestion.explanation ?? ""}
+              sectionTitle={currentQuestion.sectionTitle}
+              chapterTitle={currentQuestion.chapterTitle}
+              isCorrect={isCurrentCorrect}
+            />
+          </aside>
+        )}
       </div>
     </section>
   )
 }
 
-type ResultsDossierProps = {
+type QuizResultProps = {
   answeredCount: number
   answers: Record<number, number[]>
   chapterTitle: string
@@ -1470,7 +1492,7 @@ type ResultsDossierProps = {
   totalQuestions: number
 }
 
-function ResultsDossier({
+function QuizResult({
   answeredCount,
   answers,
   chapterTitle,
@@ -1486,67 +1508,77 @@ function ResultsDossier({
   scorePercent,
   syllabusFooter,
   totalQuestions,
-}: ResultsDossierProps) {
+}: QuizResultProps) {
   const unansweredCount = totalQuestions - answeredCount
+  const wrongCount = answeredCount - correctCount
   const grade = getGradeBadge(scorePercent)
 
   return (
-    <main className="relative mx-auto max-w-3xl px-4 py-7 sm:px-6 sm:py-10">
-      <article aria-live="polite" className="ryoku-border overflow-hidden bg-[#0d0d0d]/95 shadow-2xl shadow-black/40">
+    <main className="mx-auto max-w-5xl px-4 py-7 sm:px-6 sm:py-10">
+      <Card aria-live="polite" className="animate-pop-in overflow-hidden bg-white">
         {/* Header Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-white/[0.02] px-5 py-3 sm:px-7">
-          <div className="flex items-center gap-2">
-            <span className="border border-[#f2a89e]/60 bg-[#f2a89e]/10 px-2 py-0.5 font-mono text-[0.55rem] font-bold text-[#f2a89e]">
-              REPORT DOSSIER
-            </span>
-            <p className="font-mono text-[0.61rem] text-[#9d9992]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-[#4c4f69] bg-[#e6e9ef] px-5 py-3 sm:px-7">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className="-rotate-2 px-3 py-1 text-sm">
+              Hasil kuis!
+            </Badge>
+            <p className="text-sm text-[#6c6f85]">
               {chapterTitle}
             </p>
           </div>
-          <span className="flex items-center gap-1.5 font-mono text-[0.58rem] font-bold text-[#f5c4bd]">
-            <span className="size-1.5 rounded-full bg-[#f2a89e]" /> DIVERIFIKASI
+          <span className="flex rotate-1 items-center gap-1.5 rounded-full border-2 border-[#4c4f69] bg-[#40a02b] px-2.5 py-1 text-xs font-bold text-white shadow-[2px_2px_0_#4c4f69]">
+            <LuCircleCheck className="size-4" /> Tersimpan!
           </span>
         </div>
 
-        <div className="grid gap-8 px-5 py-8 sm:px-7 sm:py-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-10 lg:px-10">
-          <div>
+        <div className="grid gap-8 px-5 py-8 sm:px-7 sm:py-10 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-8">
+          <div className="min-w-0">
             <div className="flex items-start gap-4">
-              <div className="flex size-12 shrink-0 items-center justify-center border border-[#f2a89e]/60 bg-[#f2a89e]/10 text-[#f2a89e] ">
-                <Trophy className="size-6" />
+              <div className="animate-wiggle flex size-14 shrink-0 items-center justify-center rounded-2xl border-2 border-[#4c4f69] bg-[#df8e1d] text-white shadow-[3px_3px_0_#4c4f69]">
+                <LuTrophy className="size-6" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className={`border px-2 py-0.5 font-mono text-[0.58rem] font-bold ${grade.color}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={`px-4 py-1.5 text-sm ${grade.color}`}>
                     {grade.grade}
-                  </span>
-                  <span className="font-mono text-[0.6rem] text-[#9d9992]">{grade.text}</span>
+                  </Badge>
+                  <span className="text-sm font-bold text-[#6c6f85]">{grade.text}</span>
                 </div>
-                <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-medium tracking-tight text-[#f0e9df] sm:text-4xl">
-                  {scorePercent >= 75 ? "Evaluasi Berhasil." : "Sesi Selesai."}
+                <h2 className="mt-2 text-3xl font-bold tracking-tight text-[#4c4f69] sm:text-4xl">
+                  {scorePercent >= 75 ? "Hasil kuismu keluar!" : "Selesai, hebat!"}
                 </h2>
-                <p className="mt-2 max-w-xl text-xs leading-5 text-[#aaa69f]">
-                  Dossier hasil pengerjaan untuk {chapterTitle}. Kamu dapat meninjau setiap soal untuk melihat kunci resmi dan memperbaiki kesalahan.
+                <p className="mt-2 max-w-xl text-sm leading-6 text-[#6c6f85]">
+                  Hasil kece untuk {chapterTitle}! Yuk intip pembahasan tiap soal biar makin jago!
                 </p>
               </div>
             </div>
 
-            {/* Tactical Metrics Box */}
-            <div className="mt-6 grid gap-px border border-white/10 bg-white/10 sm:grid-cols-3">
-              <div className="bg-[#0d0d0d] p-4">
-                <p className="font-mono text-[0.55rem] font-semibold text-[#8e8a84]">SKOR AKHIR</p>
-                <p className="mt-2 font-mono text-3xl font-bold tracking-tight text-[#f2a89e]">
-                  {scorePercent}%
-                </p>
+            {/* Score box */}
+            <div className="dots-fun mt-6 rounded-2xl border-2 border-[#4c4f69] bg-[#8839ef] p-6 text-center shadow-[4px_4px_0_#4c4f69]">
+              <p className="inline-block -rotate-2 rounded-full border-2 border-[#4c4f69] bg-white px-3 py-0.5 text-sm font-bold text-[#4c4f69]">Skor akhir</p>
+              <p className="mt-2 text-6xl font-bold tabular-nums tracking-tight text-white drop-shadow-[3px_3px_0_#4c4f69]">
+                {scorePercent}%
+              </p>
+              <p className="mt-2 inline-block rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-[#4c4f69]">{correctCount} dari {totalQuestions} soal benar!</p>
+            </div>
+
+            {/* Stats grid */}
+            <div className="mt-4 grid grid-cols-2 gap-2.5 xl:grid-cols-4">
+              <div className="min-w-0 rounded-2xl border-2 border-[#4c4f69] bg-[#40a02b] p-3 text-center shadow-[3px_3px_0_#4c4f69]">
+                <p className="whitespace-nowrap text-xs font-bold text-white">Benar</p>
+                <p className="mt-1 truncate text-2xl font-bold tabular-nums text-white">{correctCount}</p>
               </div>
-              <div className="bg-[#0d0d0d] p-4">
-                <p className="font-mono text-[0.55rem] font-semibold text-[#8e8a84]">BENAR / TOTAL</p>
-                <p className="mt-2 font-mono text-2xl font-bold tracking-tight text-[#f0e9df]">
-                  {correctCount} / {totalQuestions}
-                </p>
+              <div className="min-w-0 rounded-2xl border-2 border-[#4c4f69] bg-[#e64553] p-3 text-center shadow-[3px_3px_0_#4c4f69]">
+                <p className="whitespace-nowrap text-xs font-bold text-white">Salah</p>
+                <p className="mt-1 truncate text-2xl font-bold tabular-nums text-white">{wrongCount}</p>
               </div>
-              <div className="bg-[#0d0d0d] p-4">
-                <p className="font-mono text-[0.55rem] font-semibold text-[#8e8a84]">WAKTU TEMPUH</p>
-                <p className="mt-2 font-mono text-2xl font-bold tracking-tight text-[#f0e9df]">
+              <div className="min-w-0 rounded-2xl border-2 border-[#4c4f69] bg-white p-3 text-center shadow-[3px_3px_0_#4c4f69]">
+                <p className="whitespace-nowrap text-xs font-bold text-[#8839ef]">Terjawab</p>
+                <p className="mt-1 truncate text-xl font-bold tabular-nums text-[#4c4f69] xl:text-2xl">{answeredCount}/{totalQuestions}</p>
+              </div>
+              <div className="min-w-0 rounded-2xl border-2 border-[#4c4f69] bg-[#04a5e5] p-3 text-center shadow-[3px_3px_0_#4c4f69]">
+                <p className="whitespace-nowrap text-xs font-bold text-white">Waktu</p>
+                <p className="mt-1 truncate text-base font-bold tabular-nums text-white xl:text-lg">
                   {formatDuration(elapsedSeconds)}
                 </p>
               </div>
@@ -1554,79 +1586,77 @@ function ResultsDossier({
 
             {/* Completion Ratio */}
             <div className="mt-6">
-              <div className="flex items-center justify-between font-mono text-[0.6rem] text-[#a9a49d]">
-                <span>TINGKAT PENYELESAIAN</span>
-                <span className="font-bold text-[#f0e9df]">
-                  {answeredCount} / {totalQuestions} ({Math.round((answeredCount / totalQuestions) * 100)}%)
+              <div className="flex items-center justify-between text-sm text-[#6c6f85]">
+                <span>Progres selesai</span>
+                <span className="font-bold text-[#4c4f69]">
+                  {answeredCount} / {totalQuestions} ({totalQuestions ? Math.round((answeredCount / totalQuestions) * 100) : 0}%)
                 </span>
               </div>
-              <div className="mt-2 h-1.5 overflow-hidden bg-white/10">
-                <div
-                  className="h-full bg-[#f2a89e]"
-                  style={{ width: `${Math.round((answeredCount / totalQuestions) * 100)}%` }}
-                />
-              </div>
+              <Progress value={totalQuestions ? Math.round((answeredCount / totalQuestions) * 100) : 0} aria-label="Completion progress" className="mt-3" />
 
-              <div className="mt-4 grid gap-2 font-mono text-[0.6rem] sm:grid-cols-2">
-                <p className="border border-white/10 bg-black/20 p-2.5 text-[#aaa69f]">
-                  <span className="font-bold text-[#f0e9df] mr-2">{flaggedCount}</span> DITANDAI RAGU (FLAGGED)
+              <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+                <p className="flex items-center gap-2 whitespace-nowrap rounded-2xl border-2 border-[#4c4f69] bg-white p-2.5 font-medium text-[#6c6f85] shadow-[2px_2px_0_#4c4f69]">
+                  <span className="font-bold tabular-nums text-[#df8e1d]">{flaggedCount}</span> Ditandai ragu
                 </p>
-                <p className="border border-white/10 bg-black/20 p-2.5 text-[#aaa69f]">
-                  <span className="font-bold text-[#f0e9df] mr-2">{unansweredCount}</span> TIDAK DIJAWAB
+                <p className="flex items-center gap-2 whitespace-nowrap rounded-2xl border-2 border-[#4c4f69] bg-white p-2.5 font-medium text-[#6c6f85] shadow-[2px_2px_0_#4c4f69]">
+                  <span className="font-bold tabular-nums text-[#4c4f69]">{unansweredCount}</span> Belum dijawab
                 </p>
               </div>
             </div>
 
             {/* Action buttons */}
             <div className="mt-8 flex flex-wrap gap-2.5">
-              <button
+              <Button
                 type="button"
                 onClick={onReview}
-                className="flex items-center gap-2 border border-emerald-500/80 bg-emerald-500/15 px-4 py-3 font-mono text-xs font-bold text-emerald-300 transition-colors hover:bg-emerald-500/25"
+                className="px-4 py-2.5 text-sm"
               >
-                <BookOpen className="size-4" /> REVIEW DETAIL JAWABAN
-              </button>
+                <LuBookOpen className="size-4" /> Lihat pembahasan!
+              </Button>
 
               {hasNextChapter && (
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={onNextChapter}
-                  className="flex items-center gap-2 border border-[#f2a89e] bg-[#f2a89e] px-4 py-3 font-mono text-xs font-bold text-[#171311] transition-colors hover:bg-[#f8c2ba]"
+                  className="px-4 py-2.5 text-sm"
                 >
-                  LANJUT CHAPTER BERIKUTNYA <ArrowRight className="size-4" />
-                </button>
+                  Lanjut yuk! <LuArrowRight className="size-4" />
+                </Button>
               )}
 
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={onRestart}
-                className="flex items-center gap-2 border border-white/20 px-4 py-3 font-mono text-xs font-semibold text-[#e8e0d1] transition-colors hover:border-white/50 hover:bg-white/[0.04]"
+                className="px-4 py-2.5 text-sm"
               >
-                <RefreshCw className="size-4" /> ULANGI CHAPTER
-              </button>
+                <LuRefreshCw className="size-4" /> Ulangi lagi!
+              </Button>
 
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={onReturnToHub}
-                className="flex items-center gap-2 border border-white/20 px-4 py-3 font-mono text-xs font-semibold text-[#aaa69f] transition-colors hover:border-white/40 hover:text-[#f0e9df]"
+                className="px-4 py-2.5 text-sm"
               >
-                <ArrowLeft className="size-4" /> PILIH BAB LAIN
-              </button>
+                <LuArrowLeft className="size-4" /> Modul lain
+              </Button>
             </div>
           </div>
 
-          {/* Quick Response Matrix Sidebar */}
-          <aside className="border border-white/10 bg-black/20 p-4 sm:p-5">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <p className="font-mono text-[0.58rem] font-bold tracking-[0.2em] text-[#9d9992]">
-                RESPONSE MATRIX
+          {/* Answer summary sidebar */}
+          <aside className="h-fit min-w-0 rounded-2xl border-2 border-[#4c4f69] bg-white p-4 shadow-[4px_4px_0_#4c4f69] sm:p-5 lg:sticky lg:top-24">
+            <div className="flex items-center justify-between border-b-2 border-dashed border-[#bcc0cc] pb-3">
+              <p className="text-sm font-bold text-[#4c4f69]">
+                Ringkasan jawaban
               </p>
-              <span className="font-mono text-[0.58rem] text-[#f2a89e]">
+              <span className="-rotate-2 rounded-full border-2 border-[#4c4f69] bg-[#8839ef] px-2 py-0.5 text-sm font-bold text-white shadow-[2px_2px_0_#4c4f69]">
                 {correctCount} / {totalQuestions}
               </span>
             </div>
 
-            <div className="mt-3.5 grid grid-cols-5 gap-1.5 max-h-72 overflow-y-auto pr-1">
+            <div className="mt-3.5 grid max-h-72 grid-cols-5 gap-1.5 overflow-y-auto pr-1">
               {questions.map((question, index) => {
                 const userAns = answers[question.id] ?? []
                 const correctAns = question.answers ?? question.answerIndexes ?? []
@@ -1636,39 +1666,40 @@ function ResultsDossier({
                 return (
                   <span
                     key={question.id}
-                    className={`flex h-8 items-center justify-center border font-mono text-[0.62rem] font-bold ${
+                    title={`Soal ${index + 1}: ${!isAnswered ? "belum dijawab" : isCorrect ? "benar" : "salah"}`}
+                    className={`flex size-9 items-center justify-center rounded-xl border-2 text-sm font-bold ${
                       !isAnswered
-                        ? "border-white/10 text-[#67635d]"
+                        ? "border-[#bcc0cc] bg-white text-[#9ca0b0]"
                         : isCorrect
-                          ? "border-emerald-500/80 bg-emerald-500/20 text-emerald-300"
-                          : "border-red-500/80 bg-red-500/20 text-red-300"
+                          ? "border-[#4c4f69] bg-[#40a02b] text-white shadow-[2px_2px_0_#4c4f69]"
+                          : "border-[#4c4f69] bg-[#e64553] text-white shadow-[2px_2px_0_#4c4f69]"
                     }`}
                   >
-                    {String(index + 1).padStart(2, "0")}
+                    {index + 1}
                   </span>
                 )
               })}
             </div>
 
-            <div className="mt-5 space-y-1.5 border-t border-white/10 pt-4 font-mono text-[0.58rem] text-[#8c8882]">
-              <p className="flex items-center gap-2">
-                <span className="size-2 bg-emerald-500" /> Benar: {correctCount}
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="size-2 bg-red-500" /> Salah: {answeredCount - correctCount}
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="size-2 border border-white/20" /> Belum Dijawab: {unansweredCount}
-              </p>
-            </div>
+            <ul className="mt-5 space-y-1.5 border-t border-[#bcc0cc] pt-4 text-sm text-[#6c6f85]">
+              <li className="flex items-center gap-2">
+                <span className="size-3 rounded-full border-2 border-[#4c4f69] bg-[#40a02b]" /> Benar: {correctCount}
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="size-3 rounded-full border-2 border-[#4c4f69] bg-[#e64553]" /> Salah: {wrongCount}
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="size-3 rounded-full border-2 border-[#4c4f69] bg-white" /> Belum dijawab: {unansweredCount}
+              </li>
+            </ul>
           </aside>
         </div>
 
-        <div className="flex items-center justify-between border-t border-white/10 bg-white/[0.01] px-5 py-3 font-mono text-[0.52rem] text-[#77736d] sm:px-7">
+        <div className="flex items-center justify-between border-t-2 border-[#4c4f69] bg-[#e6e9ef] px-5 py-3 text-xs font-bold text-[#6c6f85] sm:px-7">
           <span>{syllabusFooter}</span>
-          <span>RYOKU ENGINE v2.5 • IOSEVKA NF</span>
+          <span>IHateITS • Sistem Informasi ITS</span>
         </div>
-      </article>
+      </Card>
     </main>
   )
 }

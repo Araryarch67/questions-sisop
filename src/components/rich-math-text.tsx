@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import katex from "katex";
+import { decodeUnicodeEscapes } from "@/lib/utils";
 
 interface RichMathTextProps {
   content: string;
@@ -15,9 +16,12 @@ export function RichMathText({ content, className = "" }: RichMathTextProps) {
   const renderedContent = useMemo(() => {
     if (!content) return null;
 
+    // Data files may contain literal \uXXXX escapes — decode first.
+    const decoded = decodeUnicodeEscapes(content);
+
     // Split text by display math ($$...$$ or \\[...\\]) first
     const blockMathRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])/g;
-    const blocks = content.split(blockMathRegex);
+    const blocks = decoded.split(blockMathRegex);
 
     return blocks.map((block, bIdx) => {
       if (!block) return null;
@@ -30,12 +34,12 @@ export function RichMathText({ content, className = "" }: RichMathTextProps) {
           return (
             <div
               key={bIdx}
-              className="my-3 overflow-x-auto rounded border border-white/10 bg-black/40 p-2.5 text-center text-[#f2a89e]"
+              className="my-3 overflow-x-auto rounded-2xl border-2 border-[#4c4f69] bg-[#8839ef]/10 p-3.5 text-center text-[#4c4f69] shadow-[3px_3px_0_#4c4f69]"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           );
         } catch {
-          return <pre key={bIdx} className="my-2 text-amber-300 font-mono text-xs overflow-x-auto">{math}</pre>;
+          return <pre key={bIdx} className="my-2 rounded-xl border-2 border-[#4c4f69] bg-[#df8e1d]/15 p-2 font-mono text-xs overflow-x-auto text-[#4c4f69]">{math}</pre>;
         }
       }
 
@@ -47,12 +51,12 @@ export function RichMathText({ content, className = "" }: RichMathTextProps) {
           return (
             <div
               key={bIdx}
-              className="my-3 overflow-x-auto rounded border border-white/10 bg-black/40 p-2.5 text-center text-[#f2a89e]"
+              className="my-3 overflow-x-auto rounded-2xl border-2 border-[#4c4f69] bg-[#8839ef]/10 p-3.5 text-center text-[#4c4f69] shadow-[3px_3px_0_#4c4f69]"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           );
         } catch {
-          return <pre key={bIdx} className="my-2 text-amber-300 font-mono text-xs overflow-x-auto">{math}</pre>;
+          return <pre key={bIdx} className="my-2 rounded-xl border-2 border-[#4c4f69] bg-[#df8e1d]/15 p-2 font-mono text-xs overflow-x-auto text-[#4c4f69]">{math}</pre>;
         }
       }
 
@@ -83,81 +87,85 @@ export function RichMathText({ content, className = "" }: RichMathTextProps) {
 }
 
 function InlineFormattedText({ text }: { text: string }) {
-  const parts = useMemo(() => {
-    // Matching inline math ($...$, \(...\)), bold (**...**), italic (*...*), code (`...`)
-    const tokenRegex = /(\$(?:\\\$|[^$])+\$|\\\([\s\S]*?\\\)|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
-    const tokens = text.split(tokenRegex);
-
-    return tokens.map((part, idx) => {
-      if (!part) return null;
-
-      // Inline math: $...$
-      if (part.startsWith("$") && part.endsWith("$") && part.length > 2 && !part.startsWith("$$")) {
-        const math = part.slice(1, -1).trim();
-        try {
-          const html = katex.renderToString(math, { displayMode: false, throwOnError: false });
-          return (
-            <span
-              key={idx}
-              className="inline-block px-1 text-[#f2a89e]"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
-          );
-        } catch {
-          return <code key={idx} className="font-mono text-xs text-amber-300">{math}</code>;
-        }
-      }
-
-      // Inline math: \(...\)
-      if (part.startsWith("\\(") && part.endsWith("\\)")) {
-        const math = part.slice(2, -2).trim();
-        try {
-          const html = katex.renderToString(math, { displayMode: false, throwOnError: false });
-          return (
-            <span
-              key={idx}
-              className="inline-block px-1 text-[#f2a89e]"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
-          );
-        } catch {
-          return <code key={idx} className="font-mono text-xs text-amber-300">{math}</code>;
-        }
-      }
-
-      // Bold: **...**
-      if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
-        return (
-          <strong key={idx} className="font-semibold text-[#f0e9df]">
-            {part.slice(2, -2)}
-          </strong>
-        );
-      }
-
-      // Italic: *...*
-      if (part.startsWith("*") && part.endsWith("*") && part.length >= 2) {
-        return (
-          <em key={idx} className="italic text-[#d6cec3]">
-            {part.slice(1, -1)}
-          </em>
-        );
-      }
-
-      // Inline code: `...`
-      if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
-        return (
-          <code
-            key={idx}
-            className="rounded border border-white/15 bg-white/[0.06] px-1.5 py-0.5 font-mono text-[0.84em] text-[#38bdf8]"
-          >
-            {part.slice(1, -1)}
-          </code>
-        );
-      }
-
-      return <span key={idx}>{part}</span>;
-    });
-  }, [text]);
+  const parts = useMemo(() => renderInlineTokens(text, "t"), [text]);
 
   return <>{parts}</>;
+}
+
+// Matching inline math ($...$, \(...\)), bold (**...**), italic (*...*), code (`...`)
+const tokenRegex = /(\$(?:\\\$|[^$])+\$|\\\([\s\S]*?\\\)|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+
+function renderInlineTokens(text: string, keyPrefix: string): React.ReactNode[] {
+  const tokens = text.split(tokenRegex);
+
+  return tokens.map((part, idx) => {
+    const key = `${keyPrefix}-${idx}`;
+    if (!part) return null;
+
+    // Inline math: $...$
+    if (part.startsWith("$") && part.endsWith("$") && part.length > 2 && !part.startsWith("$$")) {
+      const math = part.slice(1, -1).trim();
+      try {
+        const html = katex.renderToString(math, { displayMode: false, throwOnError: false });
+        return (
+          <span
+            key={key}
+            className="inline-block rounded-lg border border-[#8839ef]/30 bg-[#8839ef]/10 px-1.5 text-[#4c4f69]"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        );
+      } catch {
+        return <code key={key} className="rounded-lg border-2 border-[#4c4f69] bg-[#df8e1d]/15 px-1 text-xs text-[#4c4f69]">{math}</code>;
+      }
+    }
+
+    // Inline math: \(...\)
+    if (part.startsWith("\\(") && part.endsWith("\\)")) {
+      const math = part.slice(2, -2).trim();
+      try {
+        const html = katex.renderToString(math, { displayMode: false, throwOnError: false });
+        return (
+          <span
+            key={key}
+            className="inline-block rounded-lg border border-[#8839ef]/30 bg-[#8839ef]/10 px-1.5 text-[#4c4f69]"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        );
+      } catch {
+        return <code key={key} className="rounded-lg border-2 border-[#4c4f69] bg-[#df8e1d]/15 px-1 text-xs text-[#4c4f69]">{math}</code>;
+      }
+    }
+
+    // Bold: **...** (recurse so math inside bold also renders)
+    if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+      return (
+        <strong key={key} className="font-bold text-[#8839ef]">
+          {renderInlineTokens(part.slice(2, -2), `${key}b`)}
+        </strong>
+      );
+    }
+
+    // Italic: *...* (recurse for nested math)
+    if (part.startsWith("*") && part.endsWith("*") && part.length >= 2) {
+      return (
+        <em key={key} className="italic font-medium text-[#ea76cb]">
+          {renderInlineTokens(part.slice(1, -1), `${key}i`)}
+        </em>
+      );
+    }
+
+    // Inline code: `...` (kept literal — no math inside code)
+    if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+      return (
+        <code
+          key={key}
+          className="rounded-lg border-2 border-[#4c4f69] bg-[#e6e9ef] px-1.5 py-0.5 text-[0.84em] font-bold text-[#8839ef]"
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+
+    return <span key={key}>{part}</span>;
+  });
 }
